@@ -1,5 +1,6 @@
 requests==2.34.2
 fast-flights==3.1.0
+selectolax==1.0.2
 # fast-flights imports typing_extensions without declaring it as a dependency.
 typing_extensions==4.16.0
 pytest==9.2.0

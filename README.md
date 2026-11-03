@@ -99,7 +99,8 @@ If the scheduled workflow never starts, no check runs and no notification is sen
 
 - **Unofficial sources:** Ryanair's endpoints are undocumented and `fast-flights` scrapes Google Flights, so either can break or be blocked without notice.
 - **Google consent page:** from a German-located connection, Google returned its "Before you continue" consent page instead of results. The scraper doesn't answer it and reports the source as failed, so `google_flights` may not work from an EU network without changes. It did work from a GitHub runner.
-- **Gaps in Google data:** Google's page often reports an error that clears on a retry. A few searches can still fail, and the `coverage` check names them. Across the first three runs, 2 to 4 searches failed each time with an `IndexError`, which looks like a parsing error in `fast-flights`. FRA-BER on 2027-02-01 and MUC-BER on 2026-12-03 failed every time. Retries don't help these, and 4 failures puts coverage exactly on the warning line of 0.95.
+- **Gaps in Google data:** Google's page often reports an error that clears on a retry. A few searches can still fail, and the `coverage` check names them.
+- **Google response format:** `fast-flights` only makes the request. Its parser misses the "best flights" section and fails on itineraries with no price, so `scraper/google_flights.py` parses the response itself. That code relies on the positions of fields in an undocumented response, so a change at Google can break it, which the `coverage` check would show.
 - **Google prices:** fast-flights doesn't report a result's currency, so the `currency` column is what was requested. Prices are as Google shows them to the runner's location, which may differ from what a buyer in Germany sees.
 
 ## Terms of use
