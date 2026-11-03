@@ -12,7 +12,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "ryanair_one_way.json"
 TODAY = date(2026, 11, 3)
 CONFIG = {
     "airports": ["BER", "CGN"],
-    "weeks_ahead": 2,
+    "days_ahead": 2,
     "currency": "EUR",
     "market": "de-de",
     "delay_seconds": 0,
@@ -28,11 +28,8 @@ def no_sleep(_):
     pass
 
 
-def test_windows_start_tomorrow_and_do_not_overlap():
-    assert list(ryanair.departure_windows(TODAY, 2)) == [
-        (date(2026, 11, 4), date(2026, 11, 10)),
-        (date(2026, 11, 11), date(2026, 11, 17)),
-    ]
+def test_days_start_tomorrow():
+    assert list(ryanair.departure_days(TODAY, 2)) == [date(2026, 11, 4), date(2026, 11, 5)]
 
 
 def test_parses_real_response():
@@ -58,16 +55,17 @@ def test_skips_fares_without_a_price():
     assert len(ryanair.parse_fares(payload, TODAY)) == 1
 
 
-def test_requests_every_airport_and_window():
+def test_requests_every_airport_and_day_with_one_day_windows():
     calls = []
 
     def get(url, params):
+        assert params["outboundDepartureDateFrom"] == params["outboundDepartureDateTo"]
         calls.append((params["departureAirportIataCode"], params["outboundDepartureDateFrom"]))
         return load()
 
     rows = ryanair.collect(CONFIG, TODAY, get=get, sleep=no_sleep)
     assert len(calls) == 4
-    assert ("CGN", "2026-11-11") in calls
+    assert ("CGN", "2026-11-05") in calls
     assert len(rows) == 8
 
 

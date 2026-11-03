@@ -1,4 +1,8 @@
-"""Cheapest one-way Ryanair fares from German airports, by weekly departure window."""
+"""Cheapest one-way Ryanair fare on each route and departure day from German airports.
+
+The endpoint returns the cheapest fare per destination in the window it's given. One-day windows
+show every day with a flight, where a wider window shows only that window's cheapest day.
+"""
 
 import logging
 import time
@@ -13,11 +17,10 @@ URL = "https://www.ryanair.com/api/farfnd/v4/oneWayFares"
 log = logging.getLogger(__name__)
 
 
-def departure_windows(today, weeks):
-    """Consecutive 7-day windows, starting tomorrow."""
-    for week in range(weeks):
-        start = today + timedelta(days=1 + 7 * week)
-        yield start, start + timedelta(days=6)
+def departure_days(today, days_ahead):
+    """Each day from tomorrow, up to `days_ahead` days away."""
+    for lead in range(1, days_ahead + 1):
+        yield today + timedelta(days=lead)
 
 
 def parse_fares(payload, snapshot_date):
@@ -51,11 +54,11 @@ def collect(config, today, get=get_json, sleep=time.sleep):
     failed = 0
     consecutive = 0
     for airport in config["airports"]:
-        for start, end in departure_windows(today, config["weeks_ahead"]):
+        for day in departure_days(today, config["days_ahead"]):
             params = {
                 "departureAirportIataCode": airport,
-                "outboundDepartureDateFrom": start.isoformat(),
-                "outboundDepartureDateTo": end.isoformat(),
+                "outboundDepartureDateFrom": day.isoformat(),
+                "outboundDepartureDateTo": day.isoformat(),
                 "currency": config["currency"],
                 "market": config["market"],
                 "limit": 500,
@@ -66,7 +69,7 @@ def collect(config, today, get=get_json, sleep=time.sleep):
             except (requests.RequestException, ValueError, KeyError) as exc:
                 failed += 1
                 consecutive += 1
-                log.warning("ryanair %s %s failed: %s", airport, start, exc)
+                log.warning("ryanair %s %s failed: %s", airport, day, exc)
                 if consecutive >= config["max_consecutive_failures"]:
                     raise SourceFailed(f"{consecutive} Ryanair requests failed in a row") from exc
             sleep(config["delay_seconds"])

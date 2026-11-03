@@ -20,6 +20,22 @@ FARE_COLUMNS = [
     "stops",
     "price",
     "currency",
+    "snapshot_at",
+]
+# Files written before snapshots had a time.
+LEGACY_FARE_COLUMNS = FARE_COLUMNS[:-1]
+ITINERARY_COLUMNS = [
+    "snapshot_date",
+    "snapshot_at",
+    "source",
+    "origin",
+    "destination",
+    "departure_date",
+    "departure_time",
+    "airline",
+    "stops",
+    "price",
+    "currency",
 ]
 INDEX_COLUMNS = ["period", "coicop", "unit", "value"]
 SUMMARY_COLUMNS = ["snapshot_date", "source", "fares", "min", "p25", "median", "p75"]
@@ -62,22 +78,38 @@ def summary_path(data_dir):
     return Path(data_dir) / "germany_fares_daily_summary.csv"
 
 
-def fare_path(data_dir, source, snapshot_date):
-    return (
-        Path(data_dir)
-        / "fares"
-        / source
-        / f"{snapshot_date.year:04d}"
-        / f"{snapshot_date.isoformat()}.csv.gz"
-    )
+def run_label(run_at):
+    """Identifies one run. It's safe in a file name and sorts in time order."""
+    return run_at.strftime("%Y-%m-%dT%H%MZ")
 
 
-def write_fares(data_dir, source, snapshot_date, rows):
-    path = fare_path(data_dir, source, snapshot_date)
+def _run_path(data_dir, folder, source, run_at):
+    return Path(data_dir) / folder / source / f"{run_at.year:04d}" / f"{run_label(run_at)}.csv.gz"
+
+
+def fare_path(data_dir, source, run_at):
+    return _run_path(data_dir, "fares", source, run_at)
+
+
+def itinerary_path(data_dir, source, run_at):
+    return _run_path(data_dir, "itineraries", source, run_at)
+
+
+def _write_run(path, rows, columns, run_at):
+    """Every row gets the time the run started, so all of a run's rows share one snapshot."""
+    stamp = run_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+    stamped = [{**row, "snapshot_at": stamp} for row in rows]
     # mtime=0 keeps identical content byte-identical, so re-runs don't create noise in git.
-    data = gzip.compress(_csv_text(rows, FARE_COLUMNS).encode("utf-8"), mtime=0)
-    _replace_atomically(path, data)
+    _replace_atomically(path, gzip.compress(_csv_text(stamped, columns).encode("utf-8"), mtime=0))
     return path
+
+
+def write_fares(data_dir, source, run_at, rows):
+    return _write_run(fare_path(data_dir, source, run_at), rows, FARE_COLUMNS, run_at)
+
+
+def write_itineraries(data_dir, source, run_at, rows):
+    return _write_run(itinerary_path(data_dir, source, run_at), rows, ITINERARY_COLUMNS, run_at)
 
 
 def write_index(data_dir, rows):
@@ -86,6 +118,17 @@ def write_index(data_dir, rows):
 
 def fare_files(data_dir):
     return sorted((Path(data_dir) / "fares").glob("*/*/*.csv.gz"))
+
+
+def latest_fare_path(data_dir, source, day):
+    """That source's last run on a date, or None. Legacy files are named by date alone."""
+    folder = Path(data_dir) / "fares" / source / f"{day.year:04d}"
+    paths = sorted(folder.glob(f"{day.isoformat()}*.csv.gz"))
+    return paths[-1] if paths else None
+
+
+def path_label(path):
+    return Path(path).name.removesuffix(".csv.gz")
 
 
 def read_fare_file(path):
@@ -123,8 +166,10 @@ def summarize(rows):
 
 
 def rebuild_summary(data_dir):
+    """One row per day and source, from that day's last run, so days stay comparable."""
+    last_runs = {(path.parent.parent.name, path.name[:10]): path for path in fare_files(data_dir)}
     summaries = []
-    for path in fare_files(data_dir):
+    for path in last_runs.values():
         summary = summarize(list(read_fare_file(path)))
         if summary:
             summaries.append(summary)
@@ -140,4 +185,12 @@ def route_rows(data_dir, origin, destination):
             for row in read_fare_file(path)
             if row["origin"] == origin and row["destination"] == destination
         ]
-    return sorted(rows, key=lambda row: (row["snapshot_date"], row["departure_date"], row["source"]))
+    return sorted(
+        rows,
+        key=lambda row: (
+            row["snapshot_date"],
+            row.get("snapshot_at", ""),
+            row["departure_date"],
+            row["source"],
+        ),
+    )

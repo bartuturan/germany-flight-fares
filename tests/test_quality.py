@@ -1,10 +1,11 @@
 import tomllib
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
 from scraper import quality, storage
+from scraper.common import tracked_departures
 
 DAY = date(2026, 11, 3)
 CONFIG_PATH = Path(__file__).parent.parent / "config.toml"
@@ -14,6 +15,10 @@ CONFIG_PATH = Path(__file__).parent.parent / "config.toml"
 def config():
     with open(CONFIG_PATH, "rb") as handle:
         return tomllib.load(handle)
+
+
+def at(day, hour=5, minute=17):
+    return datetime(day.year, day.month, day.day, hour, minute, tzinfo=timezone.utc)
 
 
 def statuses(results):
@@ -42,10 +47,11 @@ def fare(origin, destination, departure, price=100, source="google_flights", day
 
 
 def google_day(config, day=DAY, price=100, keep=None):
+    source = config["google_flights"]
     rows = [
-        fare(*route.split("-"), day + timedelta(days=lead), price, day=day)
-        for route in config["google_flights"]["routes"]
-        for lead in config["google_flights"]["lead_days"]
+        fare(*route.split("-"), departure, price, day=day)
+        for route in source["routes"]
+        for departure in tracked_departures(route, day, source["min_lead_days"], source["max_lead_days"])
     ]
     return rows[:keep] if keep is not None else rows
 
@@ -54,7 +60,7 @@ def ryanair_day(config, day=DAY, price=40):
     return [
         fare(
             airport,
-            "BGY",
+            destination,
             day + timedelta(days=1 + 7 * week),
             price,
             source="ryanair",
@@ -63,7 +69,8 @@ def ryanair_day(config, day=DAY, price=40):
             flight_number=f"FR{week}",
         )
         for airport in config["ryanair"]["airports"]
-        for week in range(config["ryanair"]["weeks_ahead"])
+        for week in range(7)
+        for destination in ("BGY", "AGP")
     ]
 
 
@@ -89,7 +96,7 @@ def test_clean_day_passes(config):
 
 def test_clean_ryanair_day_passes(config):
     results = quality.check_fares(
-        "ryanair", DAY, ryanair_day(config), config, history(5, 364, 40, source="ryanair")
+        "ryanair", DAY, ryanair_day(config), config, history(5, 196, 40, source="ryanair")
     )
     assert set(statuses(results).values()) == {quality.PASS}
 
@@ -106,16 +113,19 @@ def test_changed_columns_fail(config):
 
 def test_losing_most_google_searches_fails_coverage(config):
     # The first deployed version kept 49 of 80 searches and still reported success.
-    results = quality.check_fares("google_flights", DAY, google_day(config, keep=49), config, [])
+    total = len(google_day(config))
+    results = quality.check_fares("google_flights", DAY, google_day(config, keep=total // 2), config, [])
     assert by_check(results, "coverage")["status"] == quality.FAIL
-    assert "49 of 80" in by_check(results, "coverage")["detail"]
+    assert f"{total // 2} of {total}" in by_check(results, "coverage")["detail"]
 
 
 def test_small_google_gap_passes_and_names_what_is_missing(config):
-    results = quality.check_fares("google_flights", DAY, google_day(config, keep=78), config, [])
+    rows = google_day(config)
+    missing = rows[-1]
+    results = quality.check_fares("google_flights", DAY, rows[:-1], config, [])
     coverage = by_check(results, "coverage")
     assert coverage["status"] == quality.PASS
-    assert "FRA-SIN-2027-02-01" in coverage["detail"]
+    assert f"{missing['origin']}-{missing['destination']}-{missing['departure_date']}" in coverage["detail"]
 
 
 def test_losing_one_ryanair_airport_warns(config):
@@ -151,7 +161,7 @@ def test_bad_row_is_named_and_warned(config, overrides, reason):
 
 def test_day_with_no_usable_prices_is_still_recorded(tmp_path, config):
     rows = [{**row, "price": "abc"} for row in google_day(config)]
-    storage.write_fares(tmp_path, "google_flights", DAY, rows)
+    storage.write_fares(tmp_path, "google_flights", at(DAY), rows)
     storage.rebuild_summary(tmp_path)
     results = quality.check_and_record(tmp_path, config, DAY, ["google_flights"])
     assert by_check(results, "invalid_rows")["status"] == quality.FAIL
@@ -174,7 +184,8 @@ def test_one_bad_row_is_a_warning_and_many_are_a_failure(config):
 
 def test_ryanair_departure_past_the_last_window_is_invalid(config):
     rows = ryanair_day(config)
-    rows[0] = {**rows[0], "departure_date": (DAY + timedelta(days=183)).isoformat()}
+    last_day = config["ryanair"]["days_ahead"]
+    rows[0] = {**rows[0], "departure_date": (DAY + timedelta(days=last_day + 1)).isoformat()}
     assert "unexpected_departure_or_route" in by_check(
         quality.check_fares("ryanair", DAY, rows, config, []), "invalid_rows"
     )["detail"]
@@ -213,14 +224,14 @@ def test_median_price_shift_in_either_direction(config, median, expected):
 
 def test_row_count_drop_against_history(config):
     results = quality.check_fares(
-        "google_flights", DAY, google_day(config, keep=38), config, history(5, 80, 100)
+        "google_flights", DAY, google_day(config, keep=38), config, history(5, 88, 100)
     )
     assert by_check(results, "row_count")["status"] == quality.FAIL
 
 
 def test_baseline_uses_only_recent_snapshots(config):
     prior = history(20, 40, 100)
-    prior[-14:] = history(14, 80, 100)
+    prior[-14:] = history(14, len(google_day(config)), 100)
     results = quality.check_fares("google_flights", DAY, google_day(config), config, prior)
     assert by_check(results, "row_count")["status"] == quality.PASS
 
@@ -306,7 +317,7 @@ def test_invalid_index_value_fails(config):
 
 
 def write_day(tmp_path, config, day):
-    storage.write_fares(tmp_path, "google_flights", day, google_day(config, day=day))
+    storage.write_fares(tmp_path, "google_flights", at(day), google_day(config, day=day))
     storage.rebuild_summary(tmp_path)
 
 
@@ -328,7 +339,7 @@ def test_log_keeps_earlier_days_and_replaces_a_rerun(tmp_path, config):
 
 def test_rerun_of_one_source_leaves_the_others_in_the_log(tmp_path, config):
     write_day(tmp_path, config, DAY)
-    storage.write_fares(tmp_path, "ryanair", DAY, ryanair_day(config))
+    storage.write_fares(tmp_path, "ryanair", at(DAY), ryanair_day(config))
     quality.check_and_record(tmp_path, config, DAY, ["google_flights", "ryanair"])
     quality.check_and_record(tmp_path, config, DAY, ["google_flights"])
     assert {r["source"] for r in storage.read_csv(quality.log_path(tmp_path))} == {
@@ -364,10 +375,10 @@ def test_index_row_count_compares_with_the_last_logged_count(tmp_path, config):
 
 
 def test_damaged_file_is_recorded_and_other_sources_still_run(tmp_path, config):
-    path = storage.fare_path(tmp_path, "ryanair", DAY)
+    path = storage.fare_path(tmp_path, "ryanair", at(DAY))
     path.parent.mkdir(parents=True)
     path.write_bytes(b"not gzip")
-    storage.write_fares(tmp_path, "google_flights", DAY, google_day(config))
+    storage.write_fares(tmp_path, "google_flights", at(DAY), google_day(config))
     results = quality.check_and_record(tmp_path, config, DAY, ["ryanair", "google_flights"])
     assert {r["source"]: r["status"] for r in results if r["check"] == "check_error"} == {
         "ryanair": quality.FAIL
@@ -379,12 +390,13 @@ def test_report_shows_latest_detail_and_daily_history(tmp_path, config):
     write_day(tmp_path, config, DAY)
     quality.check_and_record(tmp_path, config, DAY, ["google_flights"])
     later = DAY + timedelta(days=1)
-    storage.write_fares(tmp_path, "google_flights", later, google_day(config, day=later, keep=49))
+    total = len(google_day(config, day=later))
+    storage.write_fares(tmp_path, "google_flights", at(later), google_day(config, day=later, keep=total // 2))
     quality.check_and_record(tmp_path, config, later, ["google_flights"])
 
     report = quality.report_path(tmp_path).read_text(encoding="utf-8")
     assert "Latest check: 2026-11-04" in report
-    assert "49 of 80 found" in report
+    assert f"{total // 2} of {total} found" in report
     assert "| 2026-11-04 | fail (0 warn, 1 fail) |" in report
     assert "| 2026-11-03 | pass |" in report
 
@@ -395,3 +407,73 @@ def test_report_goes_to_the_github_step_summary(tmp_path, config, monkeypatch):
     write_day(tmp_path, config, DAY)
     quality.check_and_record(tmp_path, config, DAY, ["google_flights"])
     assert "# Data quality" in summary.read_text(encoding="utf-8")
+
+
+def test_each_run_keeps_its_own_log_entries(tmp_path, config):
+    storage.write_fares(tmp_path, "google_flights", at(DAY), google_day(config))
+    quality.check_and_record(tmp_path, config, DAY, ["google_flights"], run_at=at(DAY))
+    storage.write_fares(tmp_path, "google_flights", at(DAY, 13), google_day(config))
+    quality.check_and_record(tmp_path, config, DAY, ["google_flights"], run_at=at(DAY, 13))
+    quality.check_and_record(tmp_path, config, DAY, ["google_flights"], run_at=at(DAY, 13))
+
+    rows = storage.read_csv(quality.log_path(tmp_path))
+    per_run = {run: [r["check"] for r in rows if r["run"] == run] for run in {r["run"] for r in rows}}
+    assert set(per_run) == {"2026-11-03T0517Z", "2026-11-03T1317Z"}
+    assert all(len(checks) == len(set(checks)) for checks in per_run.values())
+
+
+def test_failed_run_is_not_excused_by_an_earlier_run_that_day(tmp_path, config):
+    storage.write_fares(tmp_path, "google_flights", at(DAY), google_day(config))
+    quality.check_and_record(tmp_path, config, DAY, ["google_flights"], run_at=at(DAY))
+
+    results = quality.check_and_record(
+        tmp_path, config, DAY, ["google_flights"], {"google_flights": "blocked"}, run_at=at(DAY, 13)
+    )
+
+    assert by_check(results, "scrape")["status"] == quality.FAIL
+    assert by_check(results, "data_present")["status"] == quality.FAIL
+    report = quality.report_path(tmp_path).read_text(encoding="utf-8")
+    assert "| 2026-11-03 | fail (0 warn, 2 fail) |" in report
+
+
+def test_report_details_show_only_the_latest_run(tmp_path, config):
+    total = len(google_day(config))
+    storage.write_fares(tmp_path, "google_flights", at(DAY), google_day(config, keep=total // 2))
+    quality.check_and_record(tmp_path, config, DAY, ["google_flights"], run_at=at(DAY))
+    storage.write_fares(tmp_path, "google_flights", at(DAY, 13), google_day(config))
+    quality.check_and_record(tmp_path, config, DAY, ["google_flights"], run_at=at(DAY, 13))
+
+    report = quality.report_path(tmp_path).read_text(encoding="utf-8")
+    assert f"{total} of {total} found" in report
+    assert f"{total // 2} of {total} found" not in report
+    assert "| 2026-11-03 | fail (" in report
+
+
+def test_recheck_without_a_run_uses_the_last_run_of_the_day(tmp_path, config):
+    total = len(google_day(config))
+    storage.write_fares(tmp_path, "google_flights", at(DAY), google_day(config, keep=total // 2))
+    storage.write_fares(tmp_path, "google_flights", at(DAY, 13), google_day(config))
+    results = quality.check_and_record(tmp_path, config, DAY, ["google_flights"])
+    assert by_check(results, "coverage")["status"] == quality.PASS
+    assert {row["run"] for row in results} == {"2026-11-03T1317Z"}
+
+
+def test_log_entries_from_before_runs_were_tracked_are_kept(tmp_path, config):
+    log = quality.log_path(tmp_path)
+    log.parent.mkdir(parents=True)
+    log.write_text(
+        "date,source,check,status,value,expected,detail,checked_at\n"
+        "2026-11-02,google_flights,coverage,pass,1.0,,,2026-11-02T05:30:00Z\n",
+        encoding="utf-8",
+    )
+    storage.write_fares(tmp_path, "google_flights", at(DAY), google_day(config))
+    quality.check_and_record(tmp_path, config, DAY, ["google_flights"], run_at=at(DAY))
+
+    rows = storage.read_csv(log)
+    assert rows[0]["date"] == "2026-11-02" and rows[0]["run"] == ""
+    assert rows[-1]["run"] == "2026-11-03T0517Z"
+
+
+def test_file_from_before_snapshots_had_times_passes_the_column_check(config):
+    rows = [{key: row[key] for key in storage.LEGACY_FARE_COLUMNS} for row in google_day(config)]
+    assert statuses(quality.check_fares("google_flights", DAY, rows, config, []))["columns"] == quality.PASS

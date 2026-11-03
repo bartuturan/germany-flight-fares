@@ -30,6 +30,13 @@ def fare(day):
     }
 
 
+def google_fares(config, today):
+    itinerary = {
+        key: value for key, value in fare(today).items() if key in storage.ITINERARY_COLUMNS
+    }
+    return [{**fare(today), "source": "google_flights"}], [itinerary, itinerary]
+
+
 def blocked(config, today):
     raise SourceFailed("Google returned its consent page")
 
@@ -37,7 +44,7 @@ def blocked(config, today):
 def stub_sources(monkeypatch, google=blocked, quality_results=()):
     calls = []
 
-    def check_and_record(data_dir, config, day, sources, scrape_errors=None):
+    def check_and_record(data_dir, config, day, sources, scrape_errors=None, run_at=None):
         calls.append((sources, scrape_errors))
         return list(quality_results)
 
@@ -64,8 +71,9 @@ def test_one_failing_source_keeps_the_others_and_is_passed_to_the_checks(tmp_pat
     ]
     assert (tmp_path / "eurostat" / "germany_air_fare_index.csv").exists()
     today = datetime.now(timezone.utc).date()
-    assert storage.fare_path(tmp_path, "ryanair", today).exists()
-    assert not storage.fare_path(tmp_path, "google_flights", today).exists()
+    assert storage.latest_fare_path(tmp_path, "ryanair", today)
+    assert not storage.latest_fare_path(tmp_path, "google_flights", today)
+    assert not (tmp_path / "itineraries").exists()
     assert (tmp_path / "germany_fares_daily_summary.csv").exists()
 
 
@@ -109,3 +117,14 @@ def test_export_writes_one_route(tmp_path, monkeypatch):
     lines = out.read_text(encoding="utf-8").splitlines()
     assert lines[0].startswith("snapshot_date,source,origin")
     assert len(lines) == 2
+
+
+def test_google_writes_fares_and_itineraries_for_the_same_run(tmp_path, monkeypatch):
+    stub_sources(monkeypatch, google=google_fares)
+    assert cli.run(Namespace(source=["google_flights"], data_dir=tmp_path), CONFIG) == 0
+
+    fares = next((tmp_path / "fares" / "google_flights").glob("*/*.csv.gz"))
+    itineraries = next((tmp_path / "itineraries" / "google_flights").glob("*/*.csv.gz"))
+    assert fares.name == itineraries.name
+    assert len(list(storage.read_fare_file(itineraries))) == 2
+    assert len(list(storage.read_fare_file(fares))) == 1

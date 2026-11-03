@@ -16,21 +16,25 @@ SOURCES = ["eurostat", "ryanair", "google_flights"]
 log = logging.getLogger("scraper")
 
 
-def run_source(name, config, data_dir, today):
+def run_source(name, config, data_dir, run_at):
     if name == "eurostat":
         return storage.write_index(data_dir, eurostat.collect(config)), None
-    collect = {"ryanair": ryanair.collect, "google_flights": google_flights.collect}[name]
-    rows = collect(config, today)
-    return storage.write_fares(data_dir, name, today, rows), len(rows)
+    today = run_at.date()
+    if name == "google_flights":
+        rows, itineraries = google_flights.collect(config, today)
+        storage.write_itineraries(data_dir, name, run_at, itineraries)
+    else:
+        rows = ryanair.collect(config, today)
+    return storage.write_fares(data_dir, name, run_at, rows), len(rows)
 
 
 def run(args, config):
-    today = datetime.now(timezone.utc).date()
+    run_at = datetime.now(timezone.utc).replace(second=0, microsecond=0)
     selected = args.source or enabled_sources(config)
     failures = {}
     for name in selected:
         try:
-            path, count = run_source(name, config[name], args.data_dir, today)
+            path, count = run_source(name, config[name], args.data_dir, run_at)
             log.info("%s: wrote %s%s", name, path, f" ({count} fares)" if count else "")
         except Exception as exc:  # one source failing must not stop the others
             log.error("%s failed: %s", name, exc)
@@ -38,7 +42,7 @@ def run(args, config):
     storage.rebuild_summary(args.data_dir)
     if failures:
         log.error("failed sources: %s", ", ".join(failures))
-    results = quality.check_and_record(args.data_dir, config, today, selected, failures)
+    results = quality.check_and_record(args.data_dir, config, run_at.date(), selected, failures, run_at)
     return exit_code(results)
 
 

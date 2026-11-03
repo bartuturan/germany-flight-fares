@@ -1,17 +1,18 @@
-"""Check each day's data after scraping, and keep a running log of the results."""
+"""Check each run's data after scraping, and keep a running log of the results."""
 
 import logging
 import os
 import re
 import statistics
 from collections import Counter, defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from . import storage
+from .common import tracked_departures
 
 PASS, WARN, FAIL, SKIP = "pass", "warn", "fail", "skip"
-LOG_COLUMNS = ["date", "source", "check", "status", "value", "expected", "detail", "checked_at"]
+LOG_COLUMNS = ["date", "source", "check", "status", "value", "expected", "detail", "checked_at", "run"]
 FARE_SOURCES = ["ryanair", "google_flights"]
 REQUIRED_FARE_FIELDS = ["origin", "destination", "departure_date", "airline", "price", "currency"]
 AIRPORT_CODE = re.compile(r"^[A-Z]{3}$")
@@ -58,28 +59,39 @@ def _sample(values):
 
 
 def _expected_keys(source, source_config, day):
-    """What a complete day contains: each airport and week, or each route and lead time."""
+    """What a complete run contains: each airport and week, or each tracked departure.
+
+    Ryanair is counted by week because small airports have no flights on many days.
+    """
     if source == "ryanair":
         return {
             (airport, week)
             for airport in source_config["airports"]
-            for week in range(source_config["weeks_ahead"])
+            for week in range(_ryanair_week(source_config["days_ahead"]) + 1)
         }
     return {
-        (*route.split("-"), (day + timedelta(days=lead)).isoformat())
+        (*route.split("-"), departure.isoformat())
         for route in source_config["routes"]
-        for lead in source_config["lead_days"]
+        for departure in tracked_departures(
+            route, day, source_config["min_lead_days"], source_config["max_lead_days"]
+        )
     }
 
 
-def _row_key(source, row, day):
+def _ryanair_week(days_ahead):
+    return (days_ahead - 1) // 7
+
+
+def _row_key(source, row, day, source_config):
     if source == "ryanair":
         days_ahead = (date.fromisoformat(row["departure_date"]) - day).days
-        return (row["origin"], (days_ahead - 1) // 7)
+        if not 1 <= days_ahead <= source_config["days_ahead"]:
+            return None
+        return (row["origin"], _ryanair_week(days_ahead))
     return (row["origin"], row["destination"], row["departure_date"])
 
 
-def _row_problem(source, row, day, currency, expected):
+def _row_problem(source, row, day, source_config, expected):
     for field in REQUIRED_FARE_FIELDS:
         if not row[field]:
             return f"missing_{field}"
@@ -89,13 +101,13 @@ def _row_problem(source, row, day, currency, expected):
         return "bad_airport_code"
     if storage.parse_price(row["price"]) is None:
         return "bad_price"
-    if row["currency"] != currency:
+    if row["currency"] != source_config["currency"]:
         return "wrong_currency"
     try:
         date.fromisoformat(row["departure_date"])
     except ValueError:
         return "bad_departure_date"
-    return None if _row_key(source, row, day) in expected else "unexpected_departure_or_route"
+    return None if _row_key(source, row, day, source_config) in expected else "unexpected_departure_or_route"
 
 
 def _history_results(rows, limits, prior):
@@ -141,12 +153,12 @@ def _gap_result(prior, day):
 
 
 def check_fares(source, day, rows, config, prior):
-    """Check one day's fares. `prior` is that source's earlier summary rows, oldest first."""
+    """Check one run's fares. `prior` is that source's earlier summary rows, oldest first."""
     if not rows:
         return [_result("data_present", FAIL, 0, ">0", "no fares for this date")]
     results = [_result("data_present", PASS, len(rows), ">0")]
 
-    if list(rows[0]) != storage.FARE_COLUMNS:
+    if list(rows[0]) not in (storage.FARE_COLUMNS, storage.LEGACY_FARE_COLUMNS):
         return [*results, _result("columns", FAIL, detail=f"found {list(rows[0])}")]
     results.append(_result("columns", PASS))
 
@@ -159,7 +171,7 @@ def check_fares(source, day, rows, config, prior):
     problems = Counter()
     valid = []
     for row in rows:
-        problem = _row_problem(source, row, day, source_config["currency"], expected)
+        problem = _row_problem(source, row, day, source_config, expected)
         if problem:
             problems[problem] += 1
         else:
@@ -167,7 +179,7 @@ def check_fares(source, day, rows, config, prior):
     detail = ", ".join(f"{name}={count}" for name, count in sorted(problems.items()))
     results.append(_bad_rows_result("invalid_rows", len(rows) - len(valid), len(rows), fail_share, detail))
 
-    found = {_row_key(source, row, day) for row in valid}
+    found = {_row_key(source, row, day, source_config) for row in valid}
     coverage = len(found & expected) / len(expected)
     status = (
         FAIL
@@ -300,13 +312,32 @@ def _prior_index_count(log_rows, day):
     return int(max(counts, key=lambda row: row["date"])["value"]) if counts else None
 
 
-def _check_source(data_dir, config, day, source, log_rows):
+def _fares_to_check(data_dir, source, day, run_at):
+    """This run's file, which a failed scrape won't have, or the day's last run if none is given."""
+    if run_at:
+        return storage.fare_path(data_dir, source, run_at)
+    return storage.latest_fare_path(data_dir, source, day)
+
+
+def _check_source(data_dir, config, day, source, log_rows, run_at):
     if source == "eurostat":
         rows = storage.read_csv(storage.index_path(data_dir))
         return check_index(day, rows, config, _prior_index_count(log_rows, day))
-    path = storage.fare_path(data_dir, source, day)
-    rows = list(storage.read_fare_file(path)) if path.exists() else []
+    path = _fares_to_check(data_dir, source, day, run_at)
+    rows = list(storage.read_fare_file(path)) if path and path.exists() else []
     return check_fares(source, day, rows, config, _prior_summaries(data_dir, source, day))
+
+
+def _run_of(data_dir, source, day, run_at):
+    if run_at:
+        return storage.run_label(run_at)
+    path = None if source == "eurostat" else storage.latest_fare_path(data_dir, source, day)
+    return storage.path_label(path) if path else day.isoformat()
+
+
+def _logged_run(row):
+    """Entries logged before runs were tracked count as one run for their date."""
+    return row.get("run") or row["date"]
 
 
 def _worst(statuses):
@@ -317,7 +348,7 @@ def _worst(statuses):
 
 
 def render_report(log_rows, report_days):
-    """Latest results per source, then a day-by-day history."""
+    """Results of each source's latest run, then a day-by-day history covering every run."""
     if not log_rows:
         return "# Data quality\n\nNo checks have run yet.\n"
     sources = sorted({row["source"] for row in log_rows})
@@ -330,7 +361,11 @@ def render_report(log_rows, report_days):
     latest = by_day[days[0]]
     lines += ["| Source | Check | Status | Value | Expected | Detail |", "|---|---|---|---|---|---|"]
     for source in sources:
-        for row in latest.get(source, []):
+        rows = latest.get(source, [])
+        last_run = max((_logged_run(row) for row in rows), default=None)
+        for row in rows:
+            if _logged_run(row) != last_run:
+                continue
             cells = [source, row["check"], row["status"], row["value"], row["expected"], row["detail"]]
             lines.append("| " + " | ".join(str(c).replace("|", "/") for c in cells) + " |")
 
@@ -351,8 +386,11 @@ def render_report(log_rows, report_days):
     return "\n".join(lines) + "\n"
 
 
-def check_and_record(data_dir, config, day, sources, scrape_errors=None):
-    """Check the sources for one date, replace that date's log entries, rebuild the report."""
+def check_and_record(data_dir, config, day, sources, scrape_errors=None, run_at=None):
+    """Check one run per source, replace that run's log entries, rebuild the report.
+
+    Without `run_at`, this re-checks the last run of the day.
+    """
     scrape_errors = scrape_errors or {}
     log_rows = storage.read_csv(log_path(data_dir))
     checked_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -363,17 +401,23 @@ def check_and_record(data_dir, config, day, sources, scrape_errors=None):
         if source in scrape_errors:
             results.append(_result("scrape", FAIL, detail=scrape_errors[source]))
         try:
-            results += _check_source(data_dir, config, day, source, log_rows)
+            results += _check_source(data_dir, config, day, source, log_rows, run_at)
         except Exception as exc:  # a damaged file should be recorded, not stop the other checks
             results.append(_result("check_error", FAIL, detail=repr(exc)))
         new_rows += [
-            {"date": day.isoformat(), "source": source, **result, "checked_at": checked_at}
+            {
+                "date": day.isoformat(),
+                "source": source,
+                **result,
+                "checked_at": checked_at,
+                "run": _run_of(data_dir, source, day, run_at),
+            }
             for result in results
         ]
 
-    replaced = {(row["date"], row["source"]) for row in new_rows}
-    kept = [row for row in log_rows if (row["date"], row["source"]) not in replaced]
-    all_rows = sorted(kept + new_rows, key=lambda row: (row["date"], row["source"]))
+    replaced = {(row["source"], _logged_run(row)) for row in new_rows}
+    kept = [row for row in log_rows if (row["source"], _logged_run(row)) not in replaced]
+    all_rows = sorted(kept + new_rows, key=lambda row: (row["date"], row["source"], _logged_run(row)))
     storage.write_csv(log_path(data_dir), all_rows, LOG_COLUMNS)
 
     report = render_report(all_rows, config["quality"]["report_days"])

@@ -2,6 +2,9 @@ import pytest
 import requests
 
 from scraper import common
+from datetime import date, timedelta
+
+from scraper.common import tracked_departures
 
 
 class FakeResponse:
@@ -56,3 +59,32 @@ def test_does_not_retry_client_errors(monkeypatch):
     with pytest.raises(requests.HTTPError):
         common.get_json("u", sleep=lambda _: None)
     assert len(calls) == 1
+
+
+def test_tracked_departures_are_about_one_a_week_within_the_range():
+    today = date(2026, 11, 3)
+    departures = tracked_departures("FRA-JFK", today, 1, 60)
+    assert 8 <= len(departures) <= 10
+    assert all(today < day <= today + timedelta(days=60) for day in departures)
+    blocks = [day.toordinal() // 7 for day in departures]
+    assert len(blocks) == len(set(blocks))
+
+
+def test_a_tracked_departure_stays_tracked_until_it_leaves():
+    today = date(2026, 11, 3)
+    for departure in tracked_departures("FRA-JFK", today, 1, 60):
+        for lead in range(1, (departure - today).days + 1):
+            assert departure in tracked_departures("FRA-JFK", departure - timedelta(days=lead), 1, 60)
+
+
+def test_a_new_departure_joins_at_the_far_end_only():
+    day_one = set(tracked_departures("FRA-JFK", date(2026, 11, 3), 1, 60))
+    day_two = set(tracked_departures("FRA-JFK", date(2026, 11, 4), 1, 60))
+    assert day_two - day_one <= {date(2026, 11, 4) + timedelta(days=60)}
+
+
+def test_tracked_weekdays_rotate_and_routes_differ():
+    today = date(2026, 11, 3)
+    departures = tracked_departures("FRA-JFK", today, 1, 365)
+    assert {day.weekday() for day in departures} == set(range(7))
+    assert departures != tracked_departures("MUC-HAM", today, 1, 365)

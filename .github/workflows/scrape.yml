@@ -2,7 +2,10 @@ name: Scrape fares
 
 on:
   schedule:
+    # Every source once a day, then Google Flights again, to see how long price moves last.
     - cron: "17 5 * * *"
+    - cron: "17 13 * * *"
+    - cron: "17 21 * * *"
   workflow_dispatch:
     inputs:
       sources:
@@ -37,7 +40,7 @@ jobs:
         id: collect
         continue-on-error: true
         env:
-          SOURCES: ${{ inputs.sources }}
+          SOURCES: ${{ inputs.sources || (github.event.schedule && github.event.schedule != '17 5 * * *' && 'google_flights') || '' }}
         run: python -m scraper run ${SOURCES:+--source $SOURCES}
 
       - name: Commit whatever succeeded
@@ -48,7 +51,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No data changes to commit"
           else
-            git commit -m "Data: $(date -u +%F)"
+            git commit -m "Data: $(date -u +%FT%H%MZ)"
+            git pull --rebase origin main
             git push
           fi
 

@@ -10,7 +10,8 @@ units = ["I25", "I15"]
 enabled = true
 # Every German airport Ryanair serves.
 airports = ["BER", "BRE", "CGN", "FDH", "FKB", "FMM", "FMO", "HAM", "HHN", "LBC", "NRN", "NUE", "PAD", "SCN"]
-weeks_ahead = 26
+# One request per airport and day. Days without a flight just return nothing.
+days_ahead = 45
 currency = "EUR"
 market = "de-de"
 delay_seconds = 1.0
@@ -21,13 +22,15 @@ max_consecutive_failures = 10
 enabled = true
 routes = [
   # Domestic
-  "FRA-BER", "MUC-BER", "MUC-HAM", "DUS-MUC",
+  "FRA-BER", "MUC-HAM",
   # Europe
-  "FRA-LHR", "BER-LHR", "FRA-CDG", "MUC-FCO", "MUC-BCN", "FRA-PMI", "HAM-PMI", "MUC-ATH", "FRA-IST", "DUS-AYT",
+  "FRA-LHR", "FRA-CDG", "MUC-BCN", "FRA-PMI", "MUC-ATH", "FRA-IST",
   # Long haul
-  "FRA-JFK", "MUC-LAX", "FRA-YYZ", "FRA-DXB", "FRA-BKK", "FRA-SIN",
+  "FRA-JFK", "FRA-BKK",
 ]
-lead_days = [7, 30, 60, 90]
+# Each route tracks one departure a week, from when it comes within max_lead_days until it leaves.
+min_lead_days = 1
+max_lead_days = 60
 currency = "EUR"
 delay_seconds = 6.0
 attempts = 2
@@ -53,15 +56,15 @@ max_age_months_warn = 2
 monthly_change_warn = 0.4
 
 [quality.ryanair]
-# Share of airport and week combinations with at least one fare. A normal day is about 0.98,
-# because small airports have no flights in some weeks. Losing one airport costs about 0.07.
+# Share of airport and week combinations with at least one fare. Small airports may have no
+# flights in some weeks. Losing one airport costs about 0.07.
 coverage_warn_below = 0.95
 coverage_fail_below = 0.8
 price_min = 1.0
 price_max = 1000.0
 
 [quality.google_flights]
-# Share of route and lead time searches with a fare.
+# Share of tracked departures with a fare.
 coverage_warn_below = 0.95
 coverage_fail_below = 0.75
 price_min = 10.0

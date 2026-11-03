@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -12,13 +12,24 @@ FIXTURES = Path(__file__).parent / "fixtures"
 TODAY = date(2026, 11, 3)
 CONFIG = {
     "routes": ["FRA-JFK", "MUC-BER"],
-    "lead_days": [7, 30],
+    "min_lead_days": 1,
+    "max_lead_days": 2,
     "currency": "EUR",
     "delay_seconds": 0,
     "attempts": 2,
     "retry_delay_seconds": 0,
     "max_consecutive_failures": 2,
 }
+
+
+@pytest.fixture(autouse=True)
+def search_every_day_in_range(monkeypatch):
+    """Which departures get tracked is tested in test_common.py."""
+    monkeypatch.setattr(
+        google_flights,
+        "tracked_departures",
+        lambda route, today, low, high: [today + timedelta(days=lead) for lead in range(low, high + 1)],
+    )
 
 
 def no_sleep(_):
@@ -137,16 +148,54 @@ def test_tied_price_prefers_fewer_stops():
     assert google_flights.cheapest_row(options, "FRA", "LHR", "EUR", TODAY)["airline"] == "Lufthansa"
 
 
-def test_searches_every_route_at_every_lead_time():
+def test_searches_every_tracked_departure_on_every_route():
     calls = []
 
     def run_search(origin, destination, when, currency):
         calls.append((origin, destination, when))
         return [itinerary(100)]
 
-    rows = google_flights.collect(CONFIG, TODAY, run_search=run_search, sleep=no_sleep)
+    rows, _ = google_flights.collect(CONFIG, TODAY, run_search=run_search, sleep=no_sleep)
     assert len(rows) == 4
-    assert ("MUC", "BER", date(2026, 12, 3)) in calls
+    assert ("MUC", "BER", date(2026, 11, 5)) in calls
+
+
+def test_keeps_every_itinerary_as_well_as_the_cheapest():
+    options = [itinerary(500), itinerary(320, ("Condor", "United"), stops=1), itinerary(410)]
+    config = {**CONFIG, "routes": ["FRA-JFK"], "max_lead_days": 1}
+
+    rows, itineraries = google_flights.collect(
+        config, TODAY, run_search=lambda *args: options, sleep=no_sleep
+    )
+
+    assert [row["price"] for row in rows] == [320]
+    assert [row["price"] for row in itineraries] == [500, 320, 410]
+    assert itineraries[1] == {
+        "snapshot_date": "2026-11-03",
+        "source": "google_flights",
+        "origin": "FRA",
+        "destination": "JFK",
+        "departure_date": "2026-12-03",
+        "departure_time": "09:05",
+        "airline": "Condor + United",
+        "stops": 1,
+        "price": 320,
+        "currency": "EUR",
+    }
+
+
+def test_failed_search_keeps_no_itineraries_for_it():
+    results = [SearchFailed("x"), SearchFailed("x"), [itinerary(100)]]
+
+    def run_search(*args):
+        result = results.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    config = {**CONFIG, "routes": ["FRA-JFK"]}
+    rows, itineraries = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
+    assert len(rows) == len(itineraries) == 1
 
 
 def test_blocked_stops_immediately():
@@ -162,7 +211,7 @@ def test_blocked_stops_immediately():
 
 
 def test_failed_search_is_retried_and_recovers():
-    config = {**CONFIG, "routes": ["FRA-JFK"], "lead_days": [7]}
+    config = {**CONFIG, "routes": ["FRA-JFK"], "max_lead_days": 1}
     results = [SearchFailed("Google's page reported an error"), [itinerary(100)]]
 
     def run_search(*args):
@@ -171,7 +220,7 @@ def test_failed_search_is_retried_and_recovers():
             raise result
         return result
 
-    rows = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
+    rows, _ = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
     assert [row["price"] for row in rows] == [100]
     assert results == []
 
@@ -191,7 +240,7 @@ def test_failed_search_after_retries_counts_as_failed_and_keeps_the_rest(caplog)
         return result
 
     with caplog.at_level("INFO"):
-        rows = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
+        rows, _ = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
     assert len(rows) == 1
     assert "1 of 2 searches gave a fare, 1 failed" in caplog.text
 
