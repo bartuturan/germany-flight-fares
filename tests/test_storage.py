@@ -55,6 +55,19 @@ def test_summary_of_a_single_fare():
     assert (summary["fares"], summary["p25"], summary["median"], summary["p75"]) == (1, 10, 10, 10)
 
 
+def test_summary_survives_unusable_prices(tmp_path):
+    good_and_bad = [fare(10), fare("abc"), fare(""), fare("nan"), fare(-5), fare(30)]
+    storage.write_fares(tmp_path, "ryanair", DAY, good_and_bad)
+    lines = storage.rebuild_summary(tmp_path).read_text(encoding="utf-8").splitlines()
+    assert lines[1].startswith("2026-11-03,ryanair,2,10.0,")
+
+
+def test_summary_skips_a_day_with_no_usable_prices(tmp_path):
+    storage.write_fares(tmp_path, "ryanair", DAY, [fare("abc")])
+    lines = storage.rebuild_summary(tmp_path).read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+
+
 def test_summary_has_one_row_per_day_and_source(tmp_path):
     storage.write_fares(tmp_path, "ryanair", DAY, [fare(10), fare(30)])
     storage.write_fares(tmp_path, "google_flights", DAY, [fare(99, source="google_flights")])

@@ -1,6 +1,8 @@
 from argparse import Namespace
 from datetime import datetime, timezone
 
+import pytest
+
 from scraper import __main__ as cli
 from scraper import storage
 from scraper.common import SourceFailed
@@ -32,7 +34,14 @@ def blocked(config, today):
     raise SourceFailed("Google returned its consent page")
 
 
-def stub_sources(monkeypatch, google=blocked):
+def stub_sources(monkeypatch, google=blocked, quality_results=()):
+    calls = []
+
+    def check_and_record(data_dir, config, day, sources, scrape_errors=None):
+        calls.append((sources, scrape_errors))
+        return list(quality_results)
+
+    monkeypatch.setattr(cli.quality, "check_and_record", check_and_record)
     monkeypatch.setattr(
         cli.eurostat,
         "collect",
@@ -40,13 +49,19 @@ def stub_sources(monkeypatch, google=blocked):
     )
     monkeypatch.setattr(cli.ryanair, "collect", lambda config, today: [fare(today)])
     monkeypatch.setattr(cli.google_flights, "collect", google)
+    return calls
 
 
-def test_one_failing_source_keeps_the_others_and_exits_with_an_error(tmp_path, monkeypatch):
-    stub_sources(monkeypatch)
-    code = cli.run(Namespace(source=None, data_dir=tmp_path), CONFIG)
+def test_one_failing_source_keeps_the_others_and_is_passed_to_the_checks(tmp_path, monkeypatch):
+    calls = stub_sources(monkeypatch)
+    cli.run(Namespace(source=None, data_dir=tmp_path), CONFIG)
 
-    assert code == 1
+    assert calls == [
+        (
+            ["eurostat", "ryanair", "google_flights"],
+            {"google_flights": "Google returned its consent page"},
+        )
+    ]
     assert (tmp_path / "eurostat" / "germany_air_fare_index.csv").exists()
     today = datetime.now(timezone.utc).date()
     assert storage.fare_path(tmp_path, "ryanair", today).exists()
@@ -55,15 +70,35 @@ def test_one_failing_source_keeps_the_others_and_exits_with_an_error(tmp_path, m
 
 
 def test_success_exits_cleanly_and_skips_disabled_sources(tmp_path, monkeypatch):
-    stub_sources(monkeypatch)
+    calls = stub_sources(monkeypatch)
     config = {**CONFIG, "google_flights": {"enabled": False}}
     assert cli.run(Namespace(source=None, data_dir=tmp_path), config) == 0
+    assert calls[0][0] == ["eurostat", "ryanair"]
 
 
-def test_named_source_runs_only_that_source(tmp_path, monkeypatch):
-    stub_sources(monkeypatch)
+def test_named_source_runs_and_checks_only_that_source(tmp_path, monkeypatch):
+    calls = stub_sources(monkeypatch)
     assert cli.run(Namespace(source=["ryanair"], data_dir=tmp_path), CONFIG) == 0
     assert not (tmp_path / "eurostat").exists()
+    assert calls[0][0] == ["ryanair"]
+
+
+def test_failed_check_exits_with_an_error(tmp_path, monkeypatch):
+    stub_sources(monkeypatch, quality_results=[{"status": "fail"}])
+    assert cli.run(Namespace(source=["ryanair"], data_dir=tmp_path), CONFIG) == 1
+
+
+def test_warning_alone_exits_cleanly(tmp_path, monkeypatch):
+    stub_sources(monkeypatch, quality_results=[{"status": "warn"}, {"status": "skip"}])
+    assert cli.run(Namespace(source=["ryanair"], data_dir=tmp_path), CONFIG) == 0
+
+
+def test_check_command_does_not_scrape(tmp_path, monkeypatch):
+    calls = stub_sources(monkeypatch, quality_results=[{"status": "fail"}])
+    monkeypatch.setattr(cli.ryanair, "collect", lambda config, today: pytest.fail("scraped"))
+    args = Namespace(source=["ryanair"], data_dir=tmp_path, date=None)
+    assert cli.check(args, CONFIG) == 1
+    assert calls[0] == (["ryanair"], None)
 
 
 def test_export_writes_one_route(tmp_path, monkeypatch):

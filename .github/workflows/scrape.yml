@@ -33,7 +33,7 @@ jobs:
 
       - run: python -m pytest -q
 
-      - name: Collect today's data
+      - name: Collect and check today's data
         id: collect
         continue-on-error: true
         env:
@@ -52,8 +52,8 @@ jobs:
             git push
           fi
 
-      - name: Fail the run if any source failed
+      - name: Fail the run if a source or quality check failed
         if: steps.collect.outcome == 'failure'
         run: |
-          echo "::error::At least one source failed. See the 'Collect today's data' step."
+          echo "::error::A source or quality check failed. See data/quality/quality_report.md."
           exit 1

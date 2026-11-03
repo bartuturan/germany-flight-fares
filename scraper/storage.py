@@ -3,6 +3,7 @@
 import csv
 import gzip
 import io
+import math
 import os
 import statistics
 from pathlib import Path
@@ -40,6 +41,27 @@ def _csv_text(rows, columns):
     return buffer.getvalue()
 
 
+def write_csv(path, rows, columns):
+    _replace_atomically(Path(path), _csv_text(rows, columns).encode("utf-8"))
+    return path
+
+
+def read_csv(path):
+    """Rows of a plain CSV file, or nothing if the file doesn't exist yet."""
+    if not Path(path).exists():
+        return []
+    with open(path, encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def index_path(data_dir):
+    return Path(data_dir) / "eurostat" / "germany_air_fare_index.csv"
+
+
+def summary_path(data_dir):
+    return Path(data_dir) / "germany_fares_daily_summary.csv"
+
+
 def fare_path(data_dir, source, snapshot_date):
     return (
         Path(data_dir)
@@ -59,9 +81,7 @@ def write_fares(data_dir, source, snapshot_date, rows):
 
 
 def write_index(data_dir, rows):
-    path = Path(data_dir) / "eurostat" / "germany_air_fare_index.csv"
-    _replace_atomically(path, _csv_text(rows, INDEX_COLUMNS).encode("utf-8"))
-    return path
+    return write_csv(index_path(data_dir), rows, INDEX_COLUMNS)
 
 
 def fare_files(data_dir):
@@ -73,9 +93,20 @@ def read_fare_file(path):
         yield from csv.DictReader(handle)
 
 
+def parse_price(text):
+    """The price as a number, or None if it isn't a usable one."""
+    try:
+        price = float(text)
+    except (TypeError, ValueError):
+        return None
+    return price if math.isfinite(price) and price > 0 else None
+
+
 def summarize(rows):
-    """Fare count and price spread for one source on one snapshot date."""
-    prices = [float(row["price"]) for row in rows]
+    """Fare count and price spread for one source on one snapshot date, ignoring unusable prices."""
+    prices = [price for price in map(parse_price, (row["price"] for row in rows)) if price is not None]
+    if not prices:
+        return None
     if len(prices) == 1:
         p25 = median = p75 = prices[0]
     else:
@@ -94,13 +125,11 @@ def summarize(rows):
 def rebuild_summary(data_dir):
     summaries = []
     for path in fare_files(data_dir):
-        rows = list(read_fare_file(path))
-        if rows:
-            summaries.append(summarize(rows))
+        summary = summarize(list(read_fare_file(path)))
+        if summary:
+            summaries.append(summary)
     summaries.sort(key=lambda row: (row["snapshot_date"], row["source"]))
-    path = Path(data_dir) / "germany_fares_daily_summary.csv"
-    _replace_atomically(path, _csv_text(summaries, SUMMARY_COLUMNS).encode("utf-8"))
-    return path
+    return write_csv(summary_path(data_dir), summaries, SUMMARY_COLUMNS)
 
 
 def route_rows(data_dir, origin, destination):

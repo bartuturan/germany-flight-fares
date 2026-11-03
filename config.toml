@@ -33,3 +33,36 @@ delay_seconds = 6.0
 attempts = 2
 retry_delay_seconds = 20.0
 max_consecutive_failures = 5
+
+[quality]
+# Compare against up to this many earlier snapshots, once there are enough of them.
+history_days = 14
+min_history = 3
+report_days = 30
+# Any bad row is a warning. Above this share of rows, it's a failure.
+bad_rows_fail_share = 0.01
+row_count_warn_change = 0.2
+row_count_fail_change = 0.5
+median_price_warn_change = 0.25
+median_price_fail_change = 0.5
+
+[quality.eurostat]
+# The newest month is normally 1-2 months old. One month older than this is a failure.
+max_age_months_warn = 2
+# The largest month-on-month move from 1996 to 2026-09 was 26%.
+monthly_change_warn = 0.4
+
+[quality.ryanair]
+# Share of airport and week combinations with at least one fare. A normal day is about 0.98,
+# because small airports have no flights in some weeks. Losing one airport costs about 0.07.
+coverage_warn_below = 0.95
+coverage_fail_below = 0.8
+price_min = 1.0
+price_max = 1000.0
+
+[quality.google_flights]
+# Share of route and lead time searches with a fare.
+coverage_warn_below = 0.95
+coverage_fail_below = 0.75
+price_min = 10.0
+price_max = 10000.0
