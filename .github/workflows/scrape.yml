@@ -1,0 +1,52 @@
+name: Scrape fares
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - run: python -m pytest -q
+
+      - name: Collect today's data
+        id: collect
+        continue-on-error: true
+        run: python -m scraper run
+
+      - name: Commit whatever succeeded
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No data changes to commit"
+          else
+            git commit -m "Data: $(date -u +%F)"
+            git push
+          fi
+
+      - name: Fail the run if any source failed
+        if: steps.collect.outcome == 'failure'
+        run: |
+          echo "::error::At least one source failed. See the 'Collect today's data' step."
+          exit 1

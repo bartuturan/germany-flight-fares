@@ -1,0 +1,33 @@
+[eurostat]
+enabled = true
+dataset = "prc_hicp_minr"
+geo = "DE"
+# Passenger transport by air: overall, domestic, international.
+coicop = ["CP0733", "CP07331", "CP07332"]
+units = ["I25", "I15"]
+
+[ryanair]
+enabled = true
+# Every German airport Ryanair serves.
+airports = ["BER", "BRE", "CGN", "FDH", "FKB", "FMM", "FMO", "HAM", "HHN", "LBC", "NRN", "NUE", "PAD", "SCN"]
+weeks_ahead = 26
+currency = "EUR"
+market = "de-de"
+delay_seconds = 1.0
+# Give up on the source after this many failed requests in a row.
+max_consecutive_failures = 10
+
+[google_flights]
+enabled = true
+routes = [
+  # Domestic
+  "FRA-BER", "MUC-BER", "MUC-HAM", "DUS-MUC",
+  # Europe
+  "FRA-LHR", "BER-LHR", "FRA-CDG", "MUC-FCO", "MUC-BCN", "FRA-PMI", "HAM-PMI", "MUC-ATH", "FRA-IST", "DUS-AYT",
+  # Long haul
+  "FRA-JFK", "MUC-LAX", "FRA-YYZ", "FRA-DXB", "FRA-BKK", "FRA-SIN",
+]
+lead_days = [7, 30, 60, 90]
+currency = "EUR"
+delay_seconds = 3.0
+max_consecutive_failures = 5

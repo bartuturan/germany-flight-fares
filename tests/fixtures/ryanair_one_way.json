@@ -1,0 +1,109 @@
+{
+ "arrivalAirportCategories": null,
+ "fares": [
+  {
+   "outbound": {
+    "departureAirport": {
+     "countryName": "Deutschland",
+     "iataCode": "BER",
+     "name": "Berlin Brandenburg",
+     "seoName": "brandenburg",
+     "city": {
+      "code": "BERLIN",
+      "countryCode": "de",
+      "macCode": "BER",
+      "name": "Berlin"
+     }
+    },
+    "arrivalAirport": {
+     "countryName": "Italien",
+     "iataCode": "BGY",
+     "name": "Mailand Bergamo",
+     "seoName": "mailand-bergamo",
+     "city": {
+      "code": "BERGAMO",
+      "countryCode": "it",
+      "name": "Bergamo"
+     }
+    },
+    "departureDate": "2026-12-06T07:50:00",
+    "arrivalDate": "2026-12-06T09:35:00",
+    "price": {
+     "value": 17.99,
+     "valueMainUnit": "17",
+     "valueFractionalUnit": "99",
+     "currencyCode": "EUR",
+     "currencySymbol": "\u00e2\u201a\u00ac"
+    },
+    "flightKey": "FR~2670~ ~~BER~12/06/2026 07:50~BGY~12/06/2026 09:35~~",
+    "flightNumber": "FR2670",
+    "previousPrice": null,
+    "priceUpdated": 1793716305000
+   },
+   "summary": {
+    "price": {
+     "value": 17.99,
+     "valueMainUnit": "17",
+     "valueFractionalUnit": "99",
+     "currencyCode": "EUR",
+     "currencySymbol": "\u00e2\u201a\u00ac"
+    },
+    "previousPrice": null,
+    "newRoute": false
+   }
+  },
+  {
+   "outbound": {
+    "departureAirport": {
+     "countryName": "Deutschland",
+     "iataCode": "BER",
+     "name": "Berlin Brandenburg",
+     "seoName": "brandenburg",
+     "city": {
+      "code": "BERLIN",
+      "countryCode": "de",
+      "macCode": "BER",
+      "name": "Berlin"
+     }
+    },
+    "arrivalAirport": {
+     "countryName": "Spanien",
+     "iataCode": "AGP",
+     "name": "Malaga",
+     "seoName": "malaga",
+     "city": {
+      "code": "MALAGA",
+      "countryCode": "es",
+      "name": "M\u00c3\u00a1laga"
+     }
+    },
+    "departureDate": "2026-12-05T20:20:00",
+    "arrivalDate": "2026-12-05T23:55:00",
+    "price": {
+     "value": 17.99,
+     "valueMainUnit": "17",
+     "valueFractionalUnit": "99",
+     "currencyCode": "EUR",
+     "currencySymbol": "\u00e2\u201a\u00ac"
+    },
+    "flightKey": "FR~ 234~ ~~BER~12/05/2026 20:20~AGP~12/05/2026 23:55~~",
+    "flightNumber": "FR234",
+    "previousPrice": null,
+    "priceUpdated": 1793715134000
+   },
+   "summary": {
+    "price": {
+     "value": 17.99,
+     "valueMainUnit": "17",
+     "valueFractionalUnit": "99",
+     "currencyCode": "EUR",
+     "currencySymbol": "\u00e2\u201a\u00ac"
+    },
+    "previousPrice": null,
+    "newRoute": false
+   }
+  }
+ ],
+ "nextPage": null,
+ "size": 2
+}
