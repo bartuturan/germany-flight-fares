@@ -57,7 +57,9 @@ Requests are retried on HTTP 429, HTTP 5xx and connection errors. The summary is
 ## Known limits
 
 - **Unofficial sources:** Ryanair's endpoints are undocumented and `fast-flights` scrapes Google Flights, so either can break or be blocked without notice.
-- **Google consent page:** from EU IP addresses, Google returns its "Before you continue" consent page instead of results. The scraper doesn't answer it and reports the source as failed, so `google_flights` won't work from an EU network without changes.
+- **Google consent page:** from a German-located connection, Google returned its "Before you continue" consent page instead of results. The scraper doesn't answer it and reports the source as failed, so `google_flights` may not work from an EU network without changes. It did work from a GitHub runner.
+- **Gaps in Google data:** Google's page often reports an error that clears on a retry. A few searches still fail each day and the run stays green, so check the "searches gave a fare" log line or the `fares` count in the summary. In the first test, FRA-BER on 2027-02-01 and MUC-BER on 2026-12-03 failed every time with an `IndexError`, which looks like a parsing error in `fast-flights`.
+- **Google prices:** fast-flights doesn't report a result's currency, so the `currency` column is what was requested. Prices are as Google shows them to the runner's location, which may differ from what a buyer in Germany sees.
 
 ## Terms of use
 
