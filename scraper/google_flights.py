@@ -4,7 +4,7 @@ import logging
 import time
 from datetime import timedelta
 
-from fast_flights import FlightQuery, FlightsNotFound, Passengers, create_query, fetch_flights_html
+from fast_flights import FlightQuery, Passengers, create_query, fetch_flights_html
 from fast_flights.parser import parse
 
 from .common import SourceFailed
@@ -58,26 +58,42 @@ def search(origin, destination, date, currency):
     return parse_html(fetch_flights_html(query))
 
 
+def search_with_retries(run_search, config, sleep, *search_args):
+    """Retry errors, except a block, which more requests would not resolve."""
+    for attempt in range(1, config["attempts"] + 1):
+        try:
+            return run_search(*search_args)
+        except Blocked:
+            raise
+        except Exception as exc:
+            if attempt == config["attempts"]:
+                raise
+            log.info("google_flights %s retrying after: %r", search_args[:3], exc)
+            sleep(config["retry_delay_seconds"])
+
+
 def collect(config, today, run_search=search, sleep=time.sleep):
     rows = []
     failed = 0
     consecutive = 0
+    searches = len(config["routes"]) * len(config["lead_days"])
     for route in config["routes"]:
         origin, destination = route.split("-")
         for lead in config["lead_days"]:
             date = today + timedelta(days=lead)
             try:
-                flights = run_search(origin, destination, date, config["currency"])
+                flights = search_with_retries(
+                    run_search, config, sleep, origin, destination, date, config["currency"]
+                )
                 row = cheapest_row(flights, origin, destination, config["currency"], today)
                 if row:
                     rows.append(row)
                 consecutive = 0
             except Blocked as exc:
                 raise SourceFailed(str(exc)) from exc
-            except FlightsNotFound:
-                log.info("google_flights %s %s: no flights", route, date)
-                consecutive = 0
-            except Exception as exc:  # fast-flights surfaces layout changes as many error types
+            # FlightsNotFound means Google's page reported an error, not that a route is empty.
+            # Other error types are how fast-flights surfaces layout changes.
+            except Exception as exc:
                 failed += 1
                 consecutive += 1
                 log.warning("google_flights %s %s failed: %r", route, date, exc)
@@ -86,6 +102,5 @@ def collect(config, today, run_search=search, sleep=time.sleep):
             sleep(config["delay_seconds"])
     if not rows:
         raise SourceFailed("Google Flights returned no fares")
-    if failed:
-        log.warning("google_flights: %d searches failed, keeping the rest", failed)
+    log.info("google_flights: %d of %d searches gave a fare, %d failed", len(rows), searches, failed)
     return rows

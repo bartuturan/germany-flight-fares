@@ -29,5 +29,7 @@ routes = [
 ]
 lead_days = [7, 30, 60, 90]
 currency = "EUR"
-delay_seconds = 3.0
+delay_seconds = 6.0
+attempts = 2
+retry_delay_seconds = 20.0
 max_consecutive_failures = 5

@@ -13,6 +13,8 @@ CONFIG = {
     "lead_days": [7, 30],
     "currency": "EUR",
     "delay_seconds": 0,
+    "attempts": 2,
+    "retry_delay_seconds": 0,
     "max_consecutive_failures": 2,
 }
 
@@ -95,8 +97,9 @@ def test_blocked_stops_immediately():
     assert len(calls) == 1
 
 
-def test_route_without_flights_is_not_a_failure():
-    results = [FlightsNotFound("none"), [flight(100)], FlightsNotFound("none"), [flight(200)]]
+def test_google_error_is_retried_and_recovers():
+    config = {**CONFIG, "routes": ["FRA-JFK"], "lead_days": [7]}
+    results = [FlightsNotFound("no flights found; received error"), [flight(100)]]
 
     def run_search(*args):
         result = results.pop(0)
@@ -104,7 +107,29 @@ def test_route_without_flights_is_not_a_failure():
             raise result
         return result
 
-    assert len(google_flights.collect(CONFIG, TODAY, run_search=run_search, sleep=no_sleep)) == 2
+    rows = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
+    assert [row["price"] for row in rows] == [100]
+    assert results == []
+
+
+def test_google_error_after_retries_counts_as_failed_and_keeps_the_rest(caplog):
+    config = {**CONFIG, "routes": ["FRA-JFK"]}
+    results = [
+        FlightsNotFound("no flights found; received error"),
+        FlightsNotFound("no flights found; received error"),
+        [flight(100)],
+    ]
+
+    def run_search(*args):
+        result = results.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    with caplog.at_level("INFO"):
+        rows = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
+    assert len(rows) == 1
+    assert "1 of 2 searches gave a fare, 1 failed" in caplog.text
 
 
 def test_repeated_errors_stop_the_source_early():
@@ -116,4 +141,5 @@ def test_repeated_errors_stop_the_source_early():
 
     with pytest.raises(SourceFailed):
         google_flights.collect(CONFIG, TODAY, run_search=run_search, sleep=no_sleep)
-    assert len(calls) == 2
+    # Two searches in a row fail, each after two attempts.
+    assert len(calls) == 4

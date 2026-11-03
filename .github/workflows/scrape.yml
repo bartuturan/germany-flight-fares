@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "17 5 * * *"
   workflow_dispatch:
+    inputs:
+      sources:
+        description: "Sources to run, separated by spaces (default: all enabled)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -31,7 +36,9 @@ jobs:
       - name: Collect today's data
         id: collect
         continue-on-error: true
-        run: python -m scraper run
+        env:
+          SOURCES: ${{ inputs.sources }}
+        run: python -m scraper run ${SOURCES:+--source $SOURCES}
 
       - name: Commit whatever succeeded
         run: |
