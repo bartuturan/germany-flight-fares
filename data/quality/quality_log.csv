@@ -1,0 +1,26 @@
+date,source,check,status,value,expected,detail,checked_at
+2026-11-03,eurostat,data_present,pass,1306,>0,,2026-11-03T15:56:46Z
+2026-11-03,eurostat,series_present,pass,6,6,,2026-11-03T15:56:46Z
+2026-11-03,eurostat,row_count,skip,1306,,no earlier check,2026-11-03T15:56:46Z
+2026-11-03,eurostat,missing_months,pass,0,0,,2026-11-03T15:56:46Z
+2026-11-03,eurostat,invalid_values,pass,0,0,,2026-11-03T15:56:46Z
+2026-11-03,eurostat,latest_period,pass,2,<=2 months old,newest month is 2026-09,2026-11-03T15:56:46Z
+2026-11-03,eurostat,latest_change,pass,0.122,<0.4,"largest latest-month move, CP07331 I25",2026-11-03T15:56:46Z
+2026-11-03,google_flights,data_present,pass,76,>0,,2026-11-03T15:56:46Z
+2026-11-03,google_flights,columns,pass,,,,2026-11-03T15:56:46Z
+2026-11-03,google_flights,invalid_rows,pass,0,0,,2026-11-03T15:56:46Z
+2026-11-03,google_flights,coverage,pass,0.95,>=0.95,"76 of 80 found; missing FRA-BER-2027-02-01, FRA-PMI-2027-02-01, MUC-BER-2026-11-10, MUC-BER-2026-12-03",2026-11-03T15:56:46Z
+2026-11-03,google_flights,duplicates,pass,0,0,,2026-11-03T15:56:46Z
+2026-11-03,google_flights,price_range,pass,0,0,"min 70, max 1623; allowed 10 to 10000",2026-11-03T15:56:46Z
+2026-11-03,google_flights,row_count,skip,76,,"0 earlier snapshots, need 3",2026-11-03T15:56:46Z
+2026-11-03,google_flights,median_price,skip,147.5,,"0 earlier snapshots, need 3",2026-11-03T15:56:46Z
+2026-11-03,google_flights,snapshot_gap,skip,,,no earlier snapshot,2026-11-03T15:56:46Z
+2026-11-03,ryanair,data_present,pass,5111,>0,,2026-11-03T15:56:46Z
+2026-11-03,ryanair,columns,pass,,,,2026-11-03T15:56:46Z
+2026-11-03,ryanair,invalid_rows,pass,0,0,,2026-11-03T15:56:46Z
+2026-11-03,ryanair,coverage,pass,0.986,>=0.95,"359 of 364 found; missing BRE-21, BRE-22, BRE-23, BRE-24, BRE-25",2026-11-03T15:56:46Z
+2026-11-03,ryanair,duplicates,pass,0,0,,2026-11-03T15:56:46Z
+2026-11-03,ryanair,price_range,pass,0,0,"min 14.99, max 318.99; allowed 1 to 1000",2026-11-03T15:56:46Z
+2026-11-03,ryanair,row_count,skip,5111,,"0 earlier snapshots, need 3",2026-11-03T15:56:46Z
+2026-11-03,ryanair,median_price,skip,43.75,,"0 earlier snapshots, need 3",2026-11-03T15:56:46Z
+2026-11-03,ryanair,snapshot_gap,skip,,,no earlier snapshot,2026-11-03T15:56:46Z
