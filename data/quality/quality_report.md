@@ -11,14 +11,14 @@ Latest check: 2026-11-07
 | eurostat | invalid_values | pass | 0 | 0 |  |
 | eurostat | latest_period | pass | 2 | <=2 months old | newest month is 2026-09 |
 | eurostat | latest_change | pass | 0.122 | <0.4 | largest latest-month move, CP07331 I25 |
-| google_flights | data_present | pass | 82 | >0 |  |
+| google_flights | data_present | pass | 83 | >0 |  |
 | google_flights | columns | pass |  |  |  |
 | google_flights | invalid_rows | pass | 0 | 0 |  |
-| google_flights | coverage | pass | 0.988 | >=0.95 | 82 of 83 found; missing MUC-HAM-2026-11-10 |
+| google_flights | coverage | pass | 1.0 | >=0.95 | 83 of 83 found |
 | google_flights | duplicates | pass | 0 | 0 |  |
 | google_flights | price_range | pass | 0 | 0 | min 75, max 786; allowed 10 to 10000 |
-| google_flights | row_count | pass | 82 | within 20% of 81.5 | +0.6% against the trailing median |
-| google_flights | median_price | pass | 116.0 | within 25% of 118 | -1.7% against the trailing median |
+| google_flights | row_count | pass | 83 | within 20% of 81.5 | +1.8% against the trailing median |
+| google_flights | median_price | pass | 119.0 | within 25% of 118 | +0.8% against the trailing median |
 | google_flights | snapshot_gap | pass | 0 | 0 |  |
 | ryanair | data_present | pass | 4221 | >0 |  |
 | ryanair | columns | pass |  |  |  |
