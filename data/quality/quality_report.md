@@ -11,8 +11,15 @@ Latest check: 2026-11-09
 | eurostat | invalid_values | pass | 0 | 0 |  |
 | eurostat | latest_period | pass | 2 | <=2 months old | newest month is 2026-09 |
 | eurostat | latest_change | pass | 0.122 | <0.4 | largest latest-month move, CP07331 I25 |
-| google_flights | scrape | fail |  |  | 5 Google searches failed in a row |
-| google_flights | data_present | fail | 0 | >0 | no fares for this date |
+| google_flights | data_present | pass | 85 | >0 |  |
+| google_flights | columns | pass |  |  |  |
+| google_flights | invalid_rows | pass | 0 | 0 |  |
+| google_flights | coverage | pass | 0.966 | >=0.95 | 85 of 88 found; missing FRA-BER-2026-12-29, MUC-HAM-2026-11-18, MUC-HAM-2026-12-29 |
+| google_flights | duplicates | pass | 0 | 0 |  |
+| google_flights | price_range | pass | 0 | 0 | min 64, max 666; allowed 10 to 10000 |
+| google_flights | row_count | pass | 85 | within 20% of 82.5 | +3.0% against the trailing median |
+| google_flights | median_price | pass | 122.0 | within 25% of 119 | +2.5% against the trailing median |
+| google_flights | snapshot_gap | pass | 0 | 0 |  |
 | ryanair | data_present | pass | 4188 | >0 |  |
 | ryanair | columns | pass |  |  |  |
 | ryanair | invalid_rows | pass | 0 | 0 |  |
