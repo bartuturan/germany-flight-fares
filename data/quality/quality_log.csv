@@ -239,5 +239,23 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-08,ryanair,row_count,pass,4225,within 20% of 4214,+0.3% against the trailing median,2026-11-08T12:18:30Z,2026-11-08T1155Z
 2026-11-08,ryanair,median_price,pass,55.99,within 25% of 50.99,+9.8% against the trailing median,2026-11-08T12:18:30Z,2026-11-08T1155Z
 2026-11-08,ryanair,snapshot_gap,pass,0,0,,2026-11-08T12:18:30Z,2026-11-08T1155Z
+2026-11-09,eurostat,data_present,pass,1306,>0,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,eurostat,series_present,pass,6,6,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,eurostat,row_count,pass,1306,>=1306,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,eurostat,missing_months,pass,0,0,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,eurostat,invalid_values,pass,0,0,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,eurostat,latest_period,pass,2,<=2 months old,newest month is 2026-09,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,eurostat,latest_change,pass,0.122,<0.4,"largest latest-month move, CP07331 I25",2026-11-09T14:12:15Z,2026-11-09T1352Z
 2026-11-09,google_flights,scrape,fail,,,5 Google searches failed in a row,2026-11-09T01:02:47Z,2026-11-09T0053Z
 2026-11-09,google_flights,data_present,fail,0,>0,no fares for this date,2026-11-09T01:02:47Z,2026-11-09T0053Z
+2026-11-09,google_flights,scrape,fail,,,5 Google searches failed in a row,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,google_flights,data_present,fail,0,>0,no fares for this date,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,data_present,pass,4188,>0,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,columns,pass,,,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,invalid_rows,pass,0,0,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,coverage,pass,0.99,>=0.95,97 of 98 found; missing FDH-6,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,duplicates,pass,0,0,,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,price_range,pass,0,0,"min 14.99, max 492.32; allowed 1 to 1000",2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,row_count,pass,4188,within 20% of 4217.5,-0.7% against the trailing median,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,median_price,pass,58.99,within 25% of 51.845,+13.8% against the trailing median,2026-11-09T14:12:15Z,2026-11-09T1352Z
+2026-11-09,ryanair,snapshot_gap,pass,0,0,,2026-11-09T14:12:15Z,2026-11-09T1352Z
