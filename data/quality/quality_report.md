@@ -11,14 +11,14 @@ Latest check: 2026-11-09
 | eurostat | invalid_values | pass | 0 | 0 |  |
 | eurostat | latest_period | pass | 2 | <=2 months old | newest month is 2026-09 |
 | eurostat | latest_change | pass | 0.122 | <0.4 | largest latest-month move, CP07331 I25 |
-| google_flights | data_present | pass | 85 | >0 |  |
+| google_flights | data_present | pass | 70 | >0 |  |
 | google_flights | columns | pass |  |  |  |
 | google_flights | invalid_rows | pass | 0 | 0 |  |
-| google_flights | coverage | pass | 0.966 | >=0.95 | 85 of 88 found; missing FRA-BER-2026-12-29, MUC-HAM-2026-11-18, MUC-HAM-2026-12-29 |
+| google_flights | coverage | warn | 0.795 | >=0.95 | 70 of 88 found; missing FRA-BER-2026-12-12, FRA-BKK-2026-12-22, FRA-CDG-2026-12-25, FRA-IST-2026-12-23, FRA-JFK-2026-11-12, +13 more |
 | google_flights | duplicates | pass | 0 | 0 |  |
-| google_flights | price_range | pass | 0 | 0 | min 64, max 666; allowed 10 to 10000 |
-| google_flights | row_count | pass | 85 | within 20% of 82.5 | +3.0% against the trailing median |
-| google_flights | median_price | pass | 122.0 | within 25% of 119 | +2.5% against the trailing median |
+| google_flights | price_range | pass | 0 | 0 | min 64, max 771; allowed 10 to 10000 |
+| google_flights | row_count | pass | 70 | within 20% of 82.5 | -15.2% against the trailing median |
+| google_flights | median_price | pass | 115.0 | within 25% of 119 | -3.4% against the trailing median |
 | google_flights | snapshot_gap | pass | 0 | 0 |  |
 | ryanair | data_present | pass | 4188 | >0 |  |
 | ryanair | columns | pass |  |  |  |
@@ -36,7 +36,7 @@ Each cell is the worst result that day, with warning and failure counts.
 
 | Date | eurostat | google_flights | ryanair |
 |---|---|---|---|
-| 2026-11-09 | pass | fail (0 warn, 4 fail) | pass |
+| 2026-11-09 | pass | fail (1 warn, 4 fail) | pass |
 | 2026-11-08 | pass | pass | pass |
 | 2026-11-07 | pass | pass | pass |
 | 2026-11-06 | pass | pass | pass |
