@@ -519,3 +519,8 @@ def test_log_entries_from_before_runs_were_tracked_are_kept(tmp_path, config):
 def test_file_from_before_snapshots_had_times_passes_the_column_check(config):
     rows = [{key: row[key] for key in storage.LEGACY_FARE_COLUMNS} for row in google_day(config)]
     assert statuses(quality.check_fares("google_flights", DAY, rows, config, []))["columns"] == quality.PASS
+
+
+def test_file_from_before_arrival_and_price_change_columns_passes_the_column_check(config):
+    rows = [{key: row.get(key, "") for key in storage.PRE_ARRIVAL_FARE_COLUMNS} for row in google_day(config)]
+    assert statuses(quality.check_fares("google_flights", DAY, rows, config, []))["columns"] == quality.PASS

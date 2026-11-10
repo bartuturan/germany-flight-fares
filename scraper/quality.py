@@ -160,7 +160,8 @@ def check_fares(source, day, rows, config, prior):
         return [_result("data_present", FAIL, 0, ">0", "no fares for this date")]
     results = [_result("data_present", PASS, len(rows), ">0")]
 
-    if list(rows[0]) not in (storage.FARE_COLUMNS, storage.LEGACY_FARE_COLUMNS):
+    known_columns = (storage.FARE_COLUMNS, storage.PRE_ARRIVAL_FARE_COLUMNS, storage.LEGACY_FARE_COLUMNS)
+    if list(rows[0]) not in known_columns:
         return [*results, _result("columns", FAIL, detail=f"found {list(rows[0])}")]
     results.append(_result("columns", PASS))
 

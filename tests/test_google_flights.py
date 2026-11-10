@@ -72,11 +72,40 @@ def test_finds_a_cheaper_fare_in_the_best_flights_section():
         "departure_date": "2026-12-03",
         "departure_time": "07:20",
         "airline": "British Airways",
-        "flight_number": "",
+        "flight_number": "BA911",
         "stops": 0,
         "price": 102,
         "currency": "EUR",
+        "arrival_at": "2026-12-03T08:20",
     }
+
+
+def test_reads_flight_numbers_arrival_duration_via_and_section_of_a_connection():
+    parsed = google_flights.parse_payload(load("google_muc_ber_2026_11_10.json"))
+    cheapest = min(parsed, key=lambda item: item.price)
+    assert cheapest.flight_numbers == ["DE4065", "DE4000"]
+    assert cheapest.via == ["FRA"]
+    assert cheapest.arrival_at == "2026-11-10T21:20"
+    assert cheapest.duration_min == 275
+    assert cheapest.section == "other"
+    assert {item.section for item in parsed} == {"best", "other"}
+
+
+def test_a_leg_without_a_flight_number_leaves_the_whole_list_empty():
+    payload = load("google_muc_ber_2026_11_10.json")
+    cheapest_entry = next(e for sec in (2, 3) for e in (payload[sec][0] if payload[sec] else []) if e[1][0] and e[1][0][1] == 183)
+    cheapest_entry[0][2][1][22] = None
+    parsed = google_flights.parse_payload(payload)
+    assert next(item for item in parsed if item.price == 183).flight_numbers == []
+
+
+def test_broken_extra_details_do_not_lose_the_fare():
+    payload = load("google_muc_ber_2026_11_10.json")
+    entry = next(e for sec in (2, 3) for e in (payload[sec][0] if payload[sec] else []) if e[1][0] and e[1][0][1] == 183)
+    entry[0][9] = "n/a"
+    entry[0][2][-1][21] = None
+    parsed = next(item for item in google_flights.parse_payload(payload) if item.price == 183)
+    assert (parsed.duration_min, parsed.arrival_at) == (None, "")
 
 
 def test_itinerary_without_a_price_does_not_lose_the_search():
@@ -182,6 +211,11 @@ def test_keeps_every_itinerary_as_well_as_the_cheapest():
         "stops": 1,
         "price": 320,
         "currency": "EUR",
+        "flight_numbers": "",
+        "arrival_at": "",
+        "duration_min": "",
+        "via": "",
+        "section": "",
     }
 
 

@@ -46,7 +46,7 @@ def test_later_run_on_the_same_day_keeps_the_earlier_one(tmp_path):
 
 
 def test_itineraries_are_stored_apart_from_fares(tmp_path):
-    row = {key: fare(10)[key] for key in storage.ITINERARY_COLUMNS if key != "snapshot_at"}
+    row = {key: fare(10).get(key, "") for key in storage.ITINERARY_COLUMNS if key != "snapshot_at"}
     path = storage.write_itineraries(tmp_path, "google_flights", at(DAY), [row])
     assert path == tmp_path / "itineraries" / "google_flights" / "2026" / "2026-11-03T0517Z.csv.gz"
     assert storage.fare_files(tmp_path) == []

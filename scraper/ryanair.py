@@ -6,7 +6,7 @@ show every day with a flight, where a wider window shows only that window's chea
 
 import logging
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -21,6 +21,22 @@ def departure_days(today, days_ahead):
     """Each day from tomorrow, up to `days_ahead` days away."""
     for lead in range(1, days_ahead + 1):
         yield today + timedelta(days=lead)
+
+
+def _price_updated_at(milliseconds):
+    """When Ryanair last changed the fare, as UTC, or empty if the answer has no such time."""
+    if not isinstance(milliseconds, (int, float)) or isinstance(milliseconds, bool):
+        return ""
+    return datetime.fromtimestamp(milliseconds / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _previous_price(previous):
+    """Ryanair's earlier price for this flight, if it gives one, as a number or a price object."""
+    if isinstance(previous, dict):
+        previous = previous.get("value")
+    if isinstance(previous, bool) or not isinstance(previous, (int, float)):
+        return ""
+    return previous
 
 
 def parse_fares(payload, snapshot_date):
@@ -44,6 +60,9 @@ def parse_fares(payload, snapshot_date):
                 "stops": 0,
                 "price": price["value"],
                 "currency": price["currencyCode"],
+                "arrival_at": (outbound.get("arrivalDate") or "")[:16],
+                "price_updated_at": _price_updated_at(outbound.get("priceUpdated")),
+                "previous_price": _previous_price(outbound.get("previousPrice")),
             }
         )
     return rows

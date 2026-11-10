@@ -46,7 +46,28 @@ def test_parses_real_response():
         "stops": 0,
         "price": 17.99,
         "currency": "EUR",
+        "arrival_at": "2026-12-06T09:35",
+        "price_updated_at": "2026-11-03T14:31:45Z",
+        "previous_price": "",
     }
+
+
+@pytest.mark.parametrize(
+    "previous, expected",
+    [(None, ""), (24.99, 24.99), ({"value": 21.5, "currencyCode": "EUR"}, 21.5), ("n/a", ""), (True, "")],
+)
+def test_previous_price_is_read_from_a_number_or_a_price_object(previous, expected):
+    payload = load()
+    payload["fares"][0]["outbound"]["previousPrice"] = previous
+    assert ryanair.parse_fares(payload, TODAY)[0]["previous_price"] == expected
+
+
+def test_missing_arrival_and_update_time_leave_the_columns_empty():
+    payload = load()
+    for key in ("arrivalDate", "priceUpdated"):
+        del payload["fares"][0]["outbound"][key]
+    row = ryanair.parse_fares(payload, TODAY)[0]
+    assert (row["arrival_at"], row["price_updated_at"]) == ("", "")
 
 
 def test_skips_fares_without_a_price():

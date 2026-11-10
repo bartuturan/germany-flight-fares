@@ -21,9 +21,14 @@ FARE_COLUMNS = [
     "price",
     "currency",
     "snapshot_at",
+    "arrival_at",
+    "price_updated_at",
+    "previous_price",
 ]
+# Files written before the arrival and price-change columns were added.
+PRE_ARRIVAL_FARE_COLUMNS = FARE_COLUMNS[:-3]
 # Files written before snapshots had a time.
-LEGACY_FARE_COLUMNS = FARE_COLUMNS[:-1]
+LEGACY_FARE_COLUMNS = PRE_ARRIVAL_FARE_COLUMNS[:-1]
 ITINERARY_COLUMNS = [
     "snapshot_date",
     "snapshot_at",
@@ -36,6 +41,11 @@ ITINERARY_COLUMNS = [
     "stops",
     "price",
     "currency",
+    "flight_numbers",
+    "arrival_at",
+    "duration_min",
+    "via",
+    "section",
 ]
 INDEX_COLUMNS = ["period", "coicop", "unit", "value"]
 SUMMARY_COLUMNS = ["snapshot_date", "source", "fares", "min", "p25", "median", "p75"]

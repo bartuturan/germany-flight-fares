@@ -22,7 +22,9 @@ No free source offers past fares per route, so this combines two kinds of data:
 
 **Fare columns:** `snapshot_date, source, origin, destination, departure_date, departure_time, airline, flight_number, stops, price, currency, snapshot_at`. `snapshot_at` is the UTC time the run started. It's empty in the first files, from 2026-11-03, which are named by date alone. Fields a source doesn't provide are empty.
 
-**Itinerary columns:** `snapshot_date, snapshot_at, source, origin, destination, departure_date, departure_time, airline, stops, price, currency`. Use these to compare airlines or filter by stops, because the fare files hold only the cheapest itinerary.
+Three more fare columns were added on 2026-11-10, so earlier files don't have them (they read as empty): `arrival_at` is the local arrival time at the destination airport, like `departure_time` is local at the origin. `price_updated_at` is when Ryanair says it last changed the fare (UTC), and `previous_price` is Ryanair's earlier price when it gives one. Both are Ryanair only, and `previous_price` is often empty. `google_flights` fills `flight_number` (legs joined with ` + `) and `arrival_at`.
+
+**Itinerary columns:** `snapshot_date, snapshot_at, source, origin, destination, departure_date, departure_time, airline, stops, price, currency, flight_numbers, arrival_at, duration_min, via, section`. Use these to compare airlines or filter by stops, because the fare files hold only the cheapest itinerary. The last five were added on 2026-11-10: `flight_numbers` (empty unless every leg has one), `arrival_at` (local time), `duration_min` (door to door, layovers included), `via` (connection airports) and `section` (`best` or `other`, as Google groups them). They are read from Google's undocumented response, so any of them can be empty if its format changes.
 
 ### What the fares mean
 

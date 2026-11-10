@@ -9,7 +9,7 @@ import json
 import logging
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import primp
 from fast_flights import FlightQuery, Passengers, create_query
@@ -38,6 +38,12 @@ class Itinerary:
     stops: int
     departure_date: str
     departure_time: str
+    # What follows is read from fields that may be missing, so each has an empty default.
+    flight_numbers: list[str] = field(default_factory=list)
+    arrival_at: str = ""
+    duration_min: int | None = None
+    via: list[str] = field(default_factory=list)
+    section: str = ""
 
 
 def _parse_time(value):
@@ -46,31 +52,59 @@ def _parse_time(value):
     return f"{hour or 0:02d}:{minute or 0:02d}"
 
 
-def _parse_itinerary(entry):
+def _parse_date(value):
+    year, month, day = value
+    return f"{year:04d}-{month:02d}-{day:02d}"
+
+
+def _flight_number(leg):
+    """The leg's flight number, such as `DE4065`, or None if Google doesn't give one."""
+    try:
+        code, number = leg[22][0], leg[22][1]
+    except (IndexError, TypeError):
+        return None
+    return f"{code}{number}" if code and number else None
+
+
+def _optional(read, default):
+    """Details that only add to a row. A change in Google's response must not lose the fare."""
+    try:
+        return read()
+    except (IndexError, TypeError, ValueError):
+        return default
+
+
+def _parse_itinerary(entry, section=""):
     """One itinerary, or None if it has no price, which Google does for some of them."""
     flight, offer = entry[0], entry[1]
     price = offer[0][1] if offer and offer[0] else None
     if not price:
         return None
     legs = flight[2]
-    year, month, day = legs[0][20]
+    numbers = [_flight_number(leg) for leg in legs]
     return Itinerary(
         price=price,
         airlines=flight[1],
         stops=len(legs) - 1,
-        departure_date=f"{year:04d}-{month:02d}-{day:02d}",
+        departure_date=_parse_date(legs[0][20]),
         departure_time=_parse_time(legs[0][8]),
+        # None if any leg lacks one, so a partial list can't be mistaken for the whole flight.
+        flight_numbers=numbers if all(numbers) else [],
+        arrival_at=_optional(lambda: f"{_parse_date(legs[-1][21])}T{_parse_time(legs[-1][10])}", ""),
+        duration_min=_optional(lambda: int(flight[9]), None),
+        via=_optional(lambda: [leg[6] for leg in legs[:-1]], []),
+        section=section,
     )
 
 
 def parse_payload(payload):
     """All priced itineraries from both sections of Google's results."""
     itineraries = []
-    for number in (BEST_FLIGHTS, OTHER_FLIGHTS):
+    for number, section_name in ((BEST_FLIGHTS, "best"), (OTHER_FLIGHTS, "other")):
         section = payload[number]
         for entry in (section[0] or []) if section else []:
             try:
-                itinerary = _parse_itinerary(entry)
+                itinerary = _parse_itinerary(entry, section_name)
             except (IndexError, TypeError, ValueError) as exc:
                 log.warning("google_flights skipped a malformed itinerary: %r", exc)
                 continue
@@ -104,10 +138,11 @@ def cheapest_row(itineraries, origin, destination, currency, snapshot_date):
         "departure_date": best.departure_date,
         "departure_time": best.departure_time,
         "airline": " + ".join(best.airlines),
-        "flight_number": "",
+        "flight_number": " + ".join(best.flight_numbers),
         "stops": best.stops,
         "price": best.price,
         "currency": currency,
+        "arrival_at": best.arrival_at,
     }
 
 
@@ -124,6 +159,11 @@ def itinerary_rows(itineraries, origin, destination, currency, snapshot_date):
             "stops": itinerary.stops,
             "price": itinerary.price,
             "currency": currency,
+            "flight_numbers": " + ".join(itinerary.flight_numbers),
+            "arrival_at": itinerary.arrival_at,
+            "duration_min": "" if itinerary.duration_min is None else itinerary.duration_min,
+            "via": " + ".join(itinerary.via),
+            "section": itinerary.section,
         }
         for itinerary in itineraries
     ]
