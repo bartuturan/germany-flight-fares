@@ -11,7 +11,14 @@ RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
 class SourceFailed(Exception):
-    """A source could not produce a usable result for this run."""
+    """A source could not produce a usable result for this run.
+
+    `partial` holds what it did collect before stopping, if anything, so it can still be saved.
+    """
+
+    def __init__(self, message, partial=None):
+        super().__init__(message)
+        self.partial = partial
 
 
 def tracked_departures(route, today, min_lead, max_lead):

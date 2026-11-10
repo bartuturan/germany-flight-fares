@@ -1,22 +1,25 @@
 """One-way fares for tracked departures on Google Flights: the cheapest, and every itinerary.
 
-Requests go through fast-flights, but the response is parsed here. Its parser reads only the
-"other flights" section, so it misses cheaper fares under "best flights", and it loses the whole
-search if any itinerary has no price.
+fast-flights builds the query, but the request and the response are handled here. Its parser reads
+only the "other flights" section, so it misses cheaper fares under "best flights", and it loses
+the whole search if any itinerary has no price. It also starts a new session for every search.
 """
 
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass
 
-from fast_flights import FlightQuery, Passengers, create_query, fetch_flights_html
+import primp
+from fast_flights import FlightQuery, Passengers, create_query
 from selectolax.lexbor import LexborHTMLParser
 
 from .common import SourceFailed, tracked_departures
 
 log = logging.getLogger(__name__)
 
+URL = "https://www.google.com/travel/flights"
 BEST_FLIGHTS, OTHER_FLIGHTS = 2, 3
 
 
@@ -86,7 +89,8 @@ def parse_html(html):
         raise Blocked("Google returned a page with no flight data")
     data = script.text().split("data:", 1)[1].rsplit(",", 1)[0]
     if data.endswith("errorHasStatus: true"):
-        raise SearchFailed("Google's page reported an error")
+        code = re.match(r"\[(\d+),", data)
+        raise SearchFailed(f"Google's page reported an error (code {code.group(1) if code else '?'})")
     return parse_payload(json.loads(data))
 
 
@@ -125,60 +129,106 @@ def itinerary_rows(itineraries, origin, destination, currency, snapshot_date):
     ]
 
 
-def search(origin, destination, date, currency):
-    query = create_query(
-        flights=[FlightQuery(date=date.isoformat(), from_airport=origin, to_airport=destination)],
-        seat="economy",
-        trip="one-way",
-        passengers=Passengers(adults=1),
-        language="en-US",
-        currency=currency,
+def make_search():
+    """A search function that keeps one browser session, and its cookies, for a whole run.
+
+    Google answers some requests with an internal error. In a test of 120 requests on a GitHub
+    runner, a new session for every search (as fast-flights does) errored on 8 of 20 and on 39 of
+    80 across the profiles tried, while reusing one session errored on 6 of 40. Pauses between
+    requests and other browser profiles made no difference.
+    """
+    session = primp.Client(
+        impersonate="chrome_145", impersonate_os="macos", referer=True, cookie_store=True
     )
-    return parse_html(fetch_flights_html(query))
+
+    def search(origin, destination, date, currency):
+        query = create_query(
+            flights=[FlightQuery(date=date.isoformat(), from_airport=origin, to_airport=destination)],
+            seat="economy",
+            trip="one-way",
+            passengers=Passengers(adults=1),
+            language="en-US",
+            currency=currency,
+        )
+        return parse_html(session.get(URL, params=query.params()).text)
+
+    return search
 
 
-def search_with_retries(run_search, config, sleep, *search_args):
-    """Retry errors, except a block, which more requests would not resolve."""
-    for attempt in range(1, config["attempts"] + 1):
-        try:
-            return run_search(*search_args)
-        except Blocked:
-            raise
-        except Exception as exc:
-            if attempt == config["attempts"]:
-                raise
-            log.info("google_flights %s retrying after: %r", search_args[:3], exc)
-            sleep(config["retry_delay_seconds"])
-
-
-def collect(config, today, run_search=search, sleep=time.sleep):
-    """Returns the cheapest fare per search, and every itinerary that was on offer."""
+def _build_result(searches, found, currency, today):
     rows = []
     all_itineraries = []
-    failed = 0
-    consecutive = 0
-    searches = 0
-    for route in config["routes"]:
-        origin, destination = route.split("-")
-        for date in tracked_departures(route, today, config["min_lead_days"], config["max_lead_days"]):
-            searches += 1
+    for key in searches:
+        if key in found:
+            origin, destination = key[0].split("-")
+            rows.append(cheapest_row(found[key], origin, destination, currency, today))
+            all_itineraries += itinerary_rows(found[key], origin, destination, currency, today)
+    return rows, all_itineraries
+
+
+def collect(config, today, run_search=None, sleep=time.sleep, clock=time.monotonic):
+    """Returns the cheapest fare per search, and every itinerary that was on offer.
+
+    Google's errors come in waves, so a failed search is tried again in a later pass, after a
+    pause, instead of straight away. If the run is blocked or runs out of time, it raises
+    SourceFailed with what it collected attached, so that can still be saved.
+    """
+    started = clock()
+    run_search = run_search or make_search()
+    requests = errors = 0
+    searches = [
+        (route, date)
+        for route in config["routes"]
+        for date in tracked_departures(route, today, config["min_lead_days"], config["max_lead_days"])
+    ]
+    found = {}
+    pending = searches
+    stopped = None
+    for number in range(1, config["passes"] + 1):
+        if number > 1:
+            if not pending:
+                break
+            log.info("google_flights: pass %d, %d searches to try again", number, len(pending))
+            sleep(config["pass_cooldown_seconds"])
+        unfinished = []
+        consecutive = 0
+        for key in pending:
+            if clock() - started > config["time_budget_minutes"] * 60:
+                stopped = f"out of time after {config['time_budget_minutes']} minutes"
+                break
+            route, date = key
+            origin, destination = route.split("-")
+            requests += 1
             try:
-                itineraries = search_with_retries(
-                    run_search, config, sleep, origin, destination, date, config["currency"]
-                )
-                rows.append(cheapest_row(itineraries, origin, destination, config["currency"], today))
-                all_itineraries += itinerary_rows(itineraries, origin, destination, config["currency"], today)
+                found[key] = run_search(origin, destination, date, config["currency"])
                 consecutive = 0
             except Blocked as exc:
-                raise SourceFailed(str(exc)) from exc
+                stopped = str(exc)
+                break
             except Exception as exc:
-                failed += 1
+                errors += 1
+                log.warning("google_flights %s %s failed in pass %d: %r", route, date, number, exc)
+                unfinished.append(key)
                 consecutive += 1
-                log.warning("google_flights %s %s failed: %r", route, date, exc)
-                if consecutive >= config["max_consecutive_failures"]:
-                    raise SourceFailed(f"{consecutive} Google searches failed in a row") from exc
+                if consecutive >= config["max_consecutive_failures"] and not found:
+                    stopped = f"{consecutive} Google searches failed in a row and none has worked"
+                    break
             sleep(config["delay_seconds"])
+        if stopped:
+            break
+        pending = unfinished
+
+    rows, all_itineraries = _build_result(searches, found, config["currency"], today)
+    if stopped:
+        raise SourceFailed(stopped, partial=(rows, all_itineraries) if rows else None)
     if not rows:
         raise SourceFailed("Google Flights returned no fares")
-    log.info("google_flights: %d of %d searches gave a fare, %d failed", len(rows), searches, failed)
+    log.info(
+        "google_flights: %d of %d searches gave a fare, %d failed (%d of %d requests errored)",
+        len(rows),
+        len(searches),
+        len(searches) - len(rows),
+        errors,
+        requests,
+    )
     return rows, all_itineraries

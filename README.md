@@ -57,7 +57,7 @@ On Linux or macOS, use `.venv/bin/python`. Airports, routes, how far ahead to se
 
 These runs use GitHub Actions minutes, roughly 1,450 a month by estimate. Check that against your plan's allowance for private repos. To use fewer, remove a schedule or some routes.
 
-Each source runs independently. A source that is blocked, returns nothing or fails repeatedly writes no file that day, and missed days can't be recovered afterwards. The workflow still commits what succeeded, then marks the run as failed so GitHub notifies you.
+Each source runs independently. A source that is blocked at the start or returns nothing writes no file for that run, and missed runs can't be recovered afterwards. Google Flights keeps what it collected if it is blocked part-way or runs out of time (`time_budget_minutes`), and the run is still marked as failed. The workflow always commits what succeeded, then fails the run so GitHub notifies you.
 
 Requests are retried on HTTP 429, HTTP 5xx and connection errors. The summary is rebuilt from all the daily files on each run.
 
@@ -106,7 +106,7 @@ If the scheduled workflow never starts, no check runs and no notification is sen
 
 - **Unofficial sources:** Ryanair's endpoints are undocumented and `fast-flights` scrapes Google Flights, so either can break or be blocked without notice.
 - **Google consent page:** from a German-located connection, Google returned its "Before you continue" consent page instead of results. The scraper doesn't answer it and reports the source as failed, so `google_flights` may not work from an EU network without changes. It did work from a GitHub runner.
-- **Gaps in Google data:** Google's page often reports an error that clears on a retry. A few searches can still fail, and the `coverage` check names them.
+- **Google errors:** some Google searches come back as an internal error (code 13 in its response), and the rate changes a lot from hour to hour: from none in a run to around half of requests. A test of 120 requests on a GitHub runner found that reusing one browser session, as the scraper now does, errored on 6 of 40 requests, against 39 of 80 with a new session for each search. Pauses and other browser profiles made no difference, and an immediate retry usually fails too. Searches that fail are tried again in up to 3 passes, a minute and a half apart. Any that still fail are left out, and the `coverage` check names them. Each run logs how many requests errored, so you can see whether the rate is changing.
 - **Google response format:** `fast-flights` only makes the request. Its parser misses the "best flights" section and fails on itineraries with no price, so `scraper/google_flights.py` parses the response itself. That code relies on the positions of fields in an undocumented response, so a change at Google can break it, which the `coverage` check would show.
 - **Google prices:** fast-flights doesn't report a result's currency, so the `currency` column is what was requested. Prices are as Google shows them to the runner's location, which may differ from what a buyer in Germany sees.
 

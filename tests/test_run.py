@@ -128,3 +128,26 @@ def test_google_writes_fares_and_itineraries_for_the_same_run(tmp_path, monkeypa
     assert fares.name == itineraries.name
     assert len(list(storage.read_fare_file(itineraries))) == 2
     assert len(list(storage.read_fare_file(fares))) == 1
+
+
+def test_google_stopping_early_still_saves_what_it_collected(tmp_path, monkeypatch):
+    def stopped_early(config, today):
+        rows, itineraries = google_fares(config, today)
+        raise SourceFailed("out of time after 25 minutes", partial=(rows, itineraries))
+
+    calls = stub_sources(monkeypatch, google=stopped_early)
+    cli.run(Namespace(source=["google_flights"], data_dir=tmp_path), CONFIG)
+
+    fares = next((tmp_path / "fares" / "google_flights").glob("*/*.csv.gz"))
+    itineraries = next((tmp_path / "itineraries" / "google_flights").glob("*/*.csv.gz"))
+    assert len(list(storage.read_fare_file(fares))) == 1
+    assert len(list(storage.read_fare_file(itineraries))) == 2
+    # The run is still reported as a failure, with the reason.
+    assert calls == [(["google_flights"], {"google_flights": "out of time after 25 minutes"})]
+
+
+def test_google_failing_with_nothing_collected_writes_no_files(tmp_path, monkeypatch):
+    stub_sources(monkeypatch)
+    cli.run(Namespace(source=["google_flights"], data_dir=tmp_path), CONFIG)
+    assert not (tmp_path / "fares" / "google_flights").exists()
+    assert not (tmp_path / "itineraries").exists()

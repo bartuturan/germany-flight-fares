@@ -33,9 +33,15 @@ min_lead_days = 1
 max_lead_days = 60
 currency = "EUR"
 delay_seconds = 6.0
-attempts = 2
-retry_delay_seconds = 20.0
+# Google's errors come in waves, so searches that fail are tried again later in the run, after a
+# pause, up to this many passes in total.
+passes = 3
+pass_cooldown_seconds = 90.0
+# Give up early only if this many searches fail in a row before any has worked, which looks like
+# a block. After that a bad stretch doesn't stop the run, and what it collected is kept.
 max_consecutive_failures = 5
+# Stop starting searches after this long and keep what was collected.
+time_budget_minutes = 25
 
 [quality]
 # Compare against up to this many earlier snapshots, once there are enough of them.

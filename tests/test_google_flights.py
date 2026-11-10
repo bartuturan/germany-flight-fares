@@ -16,9 +16,10 @@ CONFIG = {
     "max_lead_days": 2,
     "currency": "EUR",
     "delay_seconds": 0,
-    "attempts": 2,
-    "retry_delay_seconds": 0,
+    "passes": 3,
+    "pass_cooldown_seconds": 90,
     "max_consecutive_failures": 2,
+    "time_budget_minutes": 25,
 }
 
 
@@ -184,75 +185,181 @@ def test_keeps_every_itinerary_as_well_as_the_cheapest():
     }
 
 
-def test_failed_search_keeps_no_itineraries_for_it():
-    results = [SearchFailed("x"), SearchFailed("x"), [itinerary(100)]]
+def scripted(outcomes):
+    """A run_search that plays back results per departure date, and records every call."""
+    calls = []
 
-    def run_search(*args):
-        result = results.pop(0)
+    def run_search(origin, destination, when, currency):
+        calls.append((origin, destination, when))
+        queue = outcomes.get(when, [])
+        result = queue.pop(0) if queue else [itinerary(100)]
         if isinstance(result, Exception):
             raise result
         return result
 
-    config = {**CONFIG, "routes": ["FRA-JFK"]}
+    run_search.calls = calls
+    return run_search
+
+
+ERROR = SearchFailed("Google's page reported an error")
+ONE_ROUTE = {**CONFIG, "routes": ["FRA-JFK"]}
+
+
+def test_failed_search_keeps_no_itineraries_for_it():
+    config = {**ONE_ROUTE, "passes": 1}
+    run_search = scripted({TODAY + timedelta(days=2): [ERROR]})
+
     rows, itineraries = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
-    assert len(rows) == len(itineraries) == 1
+
+    assert [row["departure_date"] for row in rows] == ["2026-12-03"]
+    assert len(itineraries) == 1
+
+
+def test_a_run_where_every_search_failed_is_a_failure():
+    config = {**ONE_ROUTE, "passes": 1, "max_consecutive_failures": 5}
+    outcomes = {TODAY + timedelta(days=lead): [ERROR] for lead in (1, 2)}
+    with pytest.raises(SourceFailed, match="no fares"):
+        google_flights.collect(config, TODAY, run_search=scripted(outcomes), sleep=no_sleep)
 
 
 def test_blocked_stops_immediately():
+    run_search = lambda *args: (_ for _ in ()).throw(google_flights.Blocked("Google returned its consent page"))
     calls = []
 
-    def run_search(*args):
+    def counting(*args):
         calls.append(args)
-        raise google_flights.Blocked("Google returned its consent page")
+        return run_search(*args)
 
     with pytest.raises(SourceFailed, match="consent"):
-        google_flights.collect(CONFIG, TODAY, run_search=run_search, sleep=no_sleep)
+        google_flights.collect(CONFIG, TODAY, run_search=counting, sleep=no_sleep)
     assert len(calls) == 1
 
 
-def test_failed_search_is_retried_and_recovers():
-    config = {**CONFIG, "routes": ["FRA-JFK"], "max_lead_days": 1}
-    results = [SearchFailed("Google's page reported an error"), [itinerary(100)]]
+def test_failed_search_is_tried_again_in_a_later_pass_after_a_pause():
+    first = TODAY + timedelta(days=1)
+    run_search = scripted({first: [ERROR]})
+    sleeps = []
 
-    def run_search(*args):
-        result = results.pop(0)
-        if isinstance(result, Exception):
-            raise result
-        return result
+    rows, itineraries = google_flights.collect(ONE_ROUTE, TODAY, run_search=run_search, sleep=sleeps.append)
 
-    rows, _ = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
-    assert [row["price"] for row in rows] == [100]
-    assert results == []
+    assert [row["departure_date"] for row in rows] == ["2026-12-03"] * 2
+    assert len(itineraries) == 2
+    # Day 1 failed in pass 1, then the second pass waited before retrying only that search.
+    assert [call[2] for call in run_search.calls] == [first, first + timedelta(days=1), first]
+    assert 90 in sleeps
 
 
-def test_failed_search_after_retries_counts_as_failed_and_keeps_the_rest(caplog):
-    config = {**CONFIG, "routes": ["FRA-JFK"]}
-    results = [
-        SearchFailed("Google's page reported an error"),
-        SearchFailed("Google's page reported an error"),
-        [itinerary(100)],
-    ]
-
-    def run_search(*args):
-        result = results.pop(0)
-        if isinstance(result, Exception):
-            raise result
-        return result
+def test_search_that_never_recovers_is_tried_once_per_pass_and_counted_as_failed(caplog):
+    first = TODAY + timedelta(days=1)
+    run_search = scripted({first: [ERROR, ERROR, ERROR, ERROR]})
 
     with caplog.at_level("INFO"):
-        rows, _ = google_flights.collect(config, TODAY, run_search=run_search, sleep=no_sleep)
+        rows, _ = google_flights.collect(ONE_ROUTE, TODAY, run_search=run_search, sleep=no_sleep)
+
     assert len(rows) == 1
+    assert [call[2] for call in run_search.calls].count(first) == 3
     assert "1 of 2 searches gave a fare, 1 failed" in caplog.text
 
 
-def test_repeated_errors_stop_the_source_early():
+def test_a_bad_stretch_does_not_stop_a_run_that_has_worked():
+    config = {**ONE_ROUTE, "max_lead_days": 6}
+    outcomes = {TODAY + timedelta(days=lead): [ERROR] for lead in range(2, 7)}
+
+    rows, _ = google_flights.collect(config, TODAY, run_search=scripted(outcomes), sleep=no_sleep)
+
+    # Five failed in a row, more than the limit of 2, but one had worked and the rest recovered.
+    assert len(rows) == 6
+
+
+def test_repeated_errors_before_anything_has_worked_stop_the_source():
     calls = []
 
     def run_search(*args):
         calls.append(args)
         raise IndexError("layout changed")
 
-    with pytest.raises(SourceFailed):
+    with pytest.raises(SourceFailed, match="none has worked") as stopped:
         google_flights.collect(CONFIG, TODAY, run_search=run_search, sleep=no_sleep)
-    # Two searches in a row fail, each after two attempts.
-    assert len(calls) == 4
+    assert len(calls) == 2
+    assert stopped.value.partial is None
+
+
+def test_being_blocked_part_way_keeps_what_was_collected():
+    first = TODAY + timedelta(days=1)
+    run_search = scripted({first + timedelta(days=1): [google_flights.Blocked("Google returned its consent page")]})
+
+    with pytest.raises(SourceFailed, match="consent") as stopped:
+        google_flights.collect(ONE_ROUTE, TODAY, run_search=run_search, sleep=no_sleep)
+
+    rows, itineraries = stopped.value.partial
+    assert [row["departure_date"] for row in rows] == ["2026-12-03"]
+    assert len(itineraries) == 1
+
+
+def test_running_out_of_time_keeps_what_was_collected():
+    ticks = iter(range(0, 100000, 600))  # every look at the clock is ten minutes later
+
+    with pytest.raises(SourceFailed, match="out of time after 25 minutes") as stopped:
+        google_flights.collect(
+            {**ONE_ROUTE, "max_lead_days": 5}, TODAY, run_search=scripted({}), sleep=no_sleep, clock=lambda: next(ticks)
+        )
+
+    rows, _ = stopped.value.partial
+    assert len(rows) == 2
+
+
+def test_running_out_of_time_with_nothing_collected_has_no_partial_result():
+    with pytest.raises(SourceFailed) as stopped:
+        google_flights.collect(
+            ONE_ROUTE, TODAY, run_search=scripted({}), sleep=no_sleep, clock=iter([0, 99999]).__next__
+        )
+    assert stopped.value.partial is None
+
+
+class FakeSession:
+    """Stands in for a primp client, counting how many are made and what they are asked for."""
+
+    created = []
+
+    def __init__(self, **options):
+        self.options = options
+        self.requests = []
+        FakeSession.created.append(self)
+
+    def get(self, url, params):
+        self.requests.append((url, params))
+
+        class Response:
+            text = page(load("google_fra_lhr_2026_12_03.json"))
+
+        return Response()
+
+
+def test_one_session_is_reused_for_every_search_in_a_run(monkeypatch):
+    FakeSession.created = []
+    monkeypatch.setattr(google_flights.primp, "Client", FakeSession)
+
+    rows, _ = google_flights.collect(CONFIG, TODAY, sleep=no_sleep)
+
+    assert len(rows) == 4
+    assert len(FakeSession.created) == 1
+    session = FakeSession.created[0]
+    assert len(session.requests) == 4
+    assert session.options["cookie_store"] is True
+    url, params = session.requests[0]
+    assert url == "https://www.google.com/travel/flights"
+    assert set(params) == {"tfs", "hl", "curr"} and params["curr"] == "EUR"
+
+
+def test_a_new_run_starts_a_new_session(monkeypatch):
+    FakeSession.created = []
+    monkeypatch.setattr(google_flights.primp, "Client", FakeSession)
+    for _ in range(2):
+        google_flights.collect({**CONFIG, "routes": ["FRA-JFK"]}, TODAY, sleep=no_sleep)
+    assert len(FakeSession.created) == 2
+
+
+def test_error_response_reports_google_error_code():
+    html = """<script class="ds:1">AF_initDataCallback({key: 'ds:1',  data:[13,null,[["type.googleapis.com/travel.frontend.flights.ErrorResponse",[[null]]]]],errorHasStatus: true,});</script>"""
+    with pytest.raises(SearchFailed, match=r"error \(code 13\)"):
+        google_flights.parse_html(html)

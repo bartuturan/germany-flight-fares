@@ -9,6 +9,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from . import eurostat, google_flights, quality, ryanair, storage
+from .common import SourceFailed
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = ["eurostat", "ryanair", "google_flights"]
@@ -16,15 +17,26 @@ SOURCES = ["eurostat", "ryanair", "google_flights"]
 log = logging.getLogger("scraper")
 
 
+def write_google(data_dir, run_at, rows, itineraries):
+    storage.write_itineraries(data_dir, "google_flights", run_at, itineraries)
+    return storage.write_fares(data_dir, "google_flights", run_at, rows)
+
+
 def run_source(name, config, data_dir, run_at):
     if name == "eurostat":
         return storage.write_index(data_dir, eurostat.collect(config)), None
     today = run_at.date()
     if name == "google_flights":
-        rows, itineraries = google_flights.collect(config, today)
-        storage.write_itineraries(data_dir, name, run_at, itineraries)
-    else:
-        rows = ryanair.collect(config, today)
+        try:
+            rows, itineraries = google_flights.collect(config, today)
+        except SourceFailed as exc:
+            if exc.partial:
+                rows, itineraries = exc.partial
+                path = write_google(data_dir, run_at, rows, itineraries)
+                log.warning("google_flights: stopped early, kept %d fares in %s", len(rows), path)
+            raise
+        return write_google(data_dir, run_at, rows, itineraries), len(rows)
+    rows = ryanair.collect(config, today)
     return storage.write_fares(data_dir, name, run_at, rows), len(rows)
 
 
