@@ -39,11 +39,34 @@ def tracked_departures(route, today, min_lead, max_lead):
 
 def get_json(url, params=None, attempts=3, backoff_seconds=5.0, timeout=60, sleep=time.sleep):
     """GET JSON, retrying rate limits, server errors and connection problems."""
+    return _retry_json(
+        lambda: requests.get(
+            url, params=params, headers={"User-Agent": USER_AGENT}, timeout=timeout
+        ),
+        url,
+        attempts,
+        backoff_seconds,
+        sleep,
+    )
+
+
+def post_json(url, payload, attempts=3, backoff_seconds=5.0, timeout=60, sleep=time.sleep):
+    """POST a JSON body and read JSON back, with the same retries as get_json."""
+    return _retry_json(
+        lambda: requests.post(
+            url, json=payload, headers={"User-Agent": USER_AGENT}, timeout=timeout
+        ),
+        url,
+        attempts,
+        backoff_seconds,
+        sleep,
+    )
+
+
+def _retry_json(send, url, attempts, backoff_seconds, sleep):
     for attempt in range(1, attempts + 1):
         try:
-            response = requests.get(
-                url, params=params, headers={"User-Agent": USER_AGENT}, timeout=timeout
-            )
+            response = send()
             if response.status_code not in RETRY_STATUS:
                 response.raise_for_status()
                 return response.json()

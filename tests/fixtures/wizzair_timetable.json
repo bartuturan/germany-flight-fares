@@ -1,0 +1,93 @@
+{
+ "outboundFlights": [
+  {
+   "departureStation": "STR",
+   "arrivalStation": "BUD",
+   "departureDate": "2026-11-11T00:00:00",
+   "price": {
+    "amount": 79.99,
+    "currencyCode": "EUR",
+    "exchangedAmount": null,
+    "exchangedCurrencyCode": null
+   },
+   "originalPrice": {
+    "amount": 79.99,
+    "currencyCode": "EUR",
+    "exchangedAmount": null,
+    "exchangedCurrencyCode": null
+   },
+   "priceType": "price",
+   "departureDates": [
+    "2026-11-11T13:15:00"
+   ],
+   "hasMacFlight": false
+  },
+  {
+   "departureStation": "STR",
+   "arrivalStation": "BUD",
+   "departureDate": "2026-11-12T00:00:00",
+   "price": {
+    "amount": 79.99,
+    "currencyCode": "EUR",
+    "exchangedAmount": null,
+    "exchangedCurrencyCode": null
+   },
+   "originalPrice": {
+    "amount": 79.99,
+    "currencyCode": "EUR",
+    "exchangedAmount": null,
+    "exchangedCurrencyCode": null
+   },
+   "priceType": "price",
+   "departureDates": [
+    "2026-11-12T13:15:00"
+   ],
+   "hasMacFlight": false
+  },
+  {
+   "departureStation": "STR",
+   "arrivalStation": "BUD",
+   "departureDate": "2026-11-13T00:00:00",
+   "price": {
+    "amount": 79.99,
+    "currencyCode": "EUR",
+    "exchangedAmount": null,
+    "exchangedCurrencyCode": null
+   },
+   "originalPrice": {
+    "amount": 79.99,
+    "currencyCode": "EUR",
+    "exchangedAmount": null,
+    "exchangedCurrencyCode": null
+   },
+   "priceType": "price",
+   "departureDates": [
+    "2026-11-13T13:15:00"
+   ],
+   "hasMacFlight": false
+  },
+  {
+   "departureStation": "STR",
+   "arrivalStation": "BUD",
+   "departureDate": "2026-11-26T00:00:00",
+   "price": {
+    "amount": 0.0,
+    "currencyCode": "EUR",
+    "exchangedAmount": null,
+    "exchangedCurrencyCode": null
+   },
+   "originalPrice": {
+    "amount": 150.99,
+    "currencyCode": "EUR",
+    "exchangedAmount": null,
+    "exchangedCurrencyCode": null
+   },
+   "priceType": "checkPrice",
+   "departureDates": [
+    "2026-11-26T13:15:00"
+   ],
+   "hasMacFlight": false
+  }
+ ],
+ "returnFlights": null
+}

@@ -74,6 +74,26 @@ def ryanair_day(config, day=DAY, price=40):
     ]
 
 
+def wizzair_day(config, day=DAY, price=60, skip_airports=()):
+    """Each configured airport has a fare in every week, as Wizz Air's routes mostly do."""
+    return [
+        fare(
+            airport,
+            destination,
+            day + timedelta(days=1 + 7 * week),
+            price,
+            source="wizzair",
+            day=day,
+            airline="Wizz Air",
+            departure_time="",
+        )
+        for airport in config["wizzair"]["airports"]
+        if airport not in skip_airports
+        for week in range(7)
+        for destination in ("BUD", "OTP")
+    ]
+
+
 def history(count, fares, median, source="google_flights", end=DAY):
     """Summary rows for the `count` days before `end`, oldest first."""
     return [
@@ -99,6 +119,28 @@ def test_clean_ryanair_day_passes(config):
         "ryanair", DAY, ryanair_day(config), config, history(5, 196, 40, source="ryanair")
     )
     assert set(statuses(results).values()) == {quality.PASS}
+
+
+def test_clean_wizzair_day_passes(config):
+    rows = wizzair_day(config)
+    results = quality.check_fares("wizzair", DAY, rows, config, history(5, len(rows), 60, source="wizzair"))
+    assert set(statuses(results).values()) == {quality.PASS}
+
+
+def test_wizzair_losing_an_airport_is_a_warning_and_losing_most_is_a_failure(config):
+    rows = wizzair_day(config, skip_airports={"FDH"})
+    assert by_check(quality.check_fares("wizzair", DAY, rows, config, []), "coverage")["status"] == quality.PASS
+
+    rows = wizzair_day(config, skip_airports=set(config["wizzair"]["airports"][:2]))
+    assert by_check(quality.check_fares("wizzair", DAY, rows, config, []), "coverage")["status"] == quality.WARN
+
+    rows = wizzair_day(config, skip_airports=set(config["wizzair"]["airports"][:5]))
+    assert by_check(quality.check_fares("wizzair", DAY, rows, config, []), "coverage")["status"] == quality.FAIL
+
+
+def test_wizzair_fares_without_a_departure_time_are_not_duplicates_across_days(config):
+    results = quality.check_fares("wizzair", DAY, wizzair_day(config), config, [])
+    assert by_check(results, "duplicates")["status"] == quality.PASS
 
 
 def test_no_fares_fails_and_stops(config):

@@ -8,11 +8,13 @@ import tomllib
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from . import eurostat, google_flights, quality, ryanair, storage
+from . import eurostat, google_flights, quality, ryanair, storage, wizzair
 from .common import SourceFailed
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCES = ["eurostat", "ryanair", "google_flights"]
+SOURCES = ["eurostat", "ryanair", "wizzair", "google_flights"]
+# Sources that write one fare file per run and return a plain list of fare rows.
+FARE_COLLECTORS = {"ryanair": ryanair, "wizzair": wizzair}
 
 log = logging.getLogger("scraper")
 
@@ -36,7 +38,7 @@ def run_source(name, config, data_dir, run_at):
                 log.warning("google_flights: stopped early, kept %d fares in %s", len(rows), path)
             raise
         return write_google(data_dir, run_at, rows, itineraries), len(rows)
-    rows = ryanair.collect(config, today)
+    rows = FARE_COLLECTORS[name].collect(config, today)
     return storage.write_fares(data_dir, name, run_at, rows), len(rows)
 
 

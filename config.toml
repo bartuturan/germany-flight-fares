@@ -18,6 +18,22 @@ delay_seconds = 1.0
 # Give up on the source after this many failed requests in a row.
 max_consecutive_failures = 10
 
+[wizzair]
+# Off until the data has been checked over a few days.
+enabled = false
+# Every German airport Wizz Air serves. Its route map lists the destinations of each.
+airports = ["BER", "CGN", "DTM", "FDH", "FKB", "FMM", "HAM", "HHN", "NUE", "STR"]
+# Two timetable requests per route. Days without a flight are left out of the answer.
+days_ahead = 45
+currency = "EUR"
+delay_seconds = 1.0
+# The API version is read from Wizz Air's homepage on each run. If that fails, this one is used.
+fallback_api_version = "29.24.0"
+# Give up on the source after this many failed requests in a row.
+max_consecutive_failures = 10
+# Server errors come in bursts, so requests that failed are tried once more after this pause.
+retry_cooldown_seconds = 60
+
 [google_flights]
 enabled = true
 routes = [
@@ -67,6 +83,14 @@ monthly_change_warn = 0.4
 coverage_warn_below = 0.95
 coverage_fail_below = 0.8
 price_min = 1.0
+price_max = 1000.0
+
+[quality.wizzair]
+# Share of airport and week combinations with at least one fare. Friedrichshafen and some
+# other small airports have no flights in some weeks. Calibrate against real runs.
+coverage_warn_below = 0.85
+coverage_fail_below = 0.6
+price_min = 5.0
 price_max = 1000.0
 
 [quality.google_flights]

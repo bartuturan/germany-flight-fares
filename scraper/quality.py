@@ -13,7 +13,9 @@ from .common import tracked_departures
 
 PASS, WARN, FAIL, SKIP = "pass", "warn", "fail", "skip"
 LOG_COLUMNS = ["date", "source", "check", "status", "value", "expected", "detail", "checked_at", "run"]
-FARE_SOURCES = ["ryanair", "google_flights"]
+FARE_SOURCES = ["ryanair", "wizzair", "google_flights"]
+# Sources with a fare for each day of a route, so coverage is counted per airport and week.
+WEEKLY_SOURCES = {"ryanair", "wizzair"}
 REQUIRED_FARE_FIELDS = ["origin", "destination", "departure_date", "airline", "price", "currency"]
 AIRPORT_CODE = re.compile(r"^[A-Z]{3}$")
 SAMPLE_SIZE = 5
@@ -61,9 +63,9 @@ def _sample(values):
 def _expected_keys(source, source_config, day):
     """What a complete run contains: each airport and week, or each tracked departure.
 
-    Ryanair is counted by week because small airports have no flights on many days.
+    Ryanair and Wizz Air are counted by week because small airports have no flights on many days.
     """
-    if source == "ryanair":
+    if source in WEEKLY_SOURCES:
         return {
             (airport, week)
             for airport in source_config["airports"]
@@ -83,7 +85,7 @@ def _ryanair_week(days_ahead):
 
 
 def _row_key(source, row, day, source_config):
-    if source == "ryanair":
+    if source in WEEKLY_SOURCES:
         days_ahead = (date.fromisoformat(row["departure_date"]) - day).days
         if not 1 <= days_ahead <= source_config["days_ahead"]:
             return None

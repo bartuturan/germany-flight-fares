@@ -10,6 +10,7 @@ from scraper.common import SourceFailed
 CONFIG = {
     "eurostat": {"enabled": True},
     "ryanair": {"enabled": True},
+    "wizzair": {"enabled": False},
     "google_flights": {"enabled": True},
 }
 
@@ -55,6 +56,9 @@ def stub_sources(monkeypatch, google=blocked, quality_results=()):
         lambda config: [{"period": "2026-09", "coicop": "CP0733", "unit": "I25", "value": 100.49}],
     )
     monkeypatch.setattr(cli.ryanair, "collect", lambda config, today: [fare(today)])
+    monkeypatch.setattr(
+        cli.wizzair, "collect", lambda config, today: [{**fare(today), "source": "wizzair"}]
+    )
     monkeypatch.setattr(cli.google_flights, "collect", google)
     return calls
 
@@ -82,6 +86,19 @@ def test_success_exits_cleanly_and_skips_disabled_sources(tmp_path, monkeypatch)
     config = {**CONFIG, "google_flights": {"enabled": False}}
     assert cli.run(Namespace(source=None, data_dir=tmp_path), config) == 0
     assert calls[0][0] == ["eurostat", "ryanair"]
+
+
+def test_wizzair_is_off_by_default_and_writes_its_own_fare_file_when_asked_for(tmp_path, monkeypatch):
+    calls = stub_sources(monkeypatch)
+    cli.run(Namespace(source=None, data_dir=tmp_path), CONFIG)
+    assert "wizzair" not in calls[0][0]
+    assert not (tmp_path / "fares" / "wizzair").exists()
+
+    assert cli.run(Namespace(source=["wizzair"], data_dir=tmp_path), CONFIG) == 0
+    today = datetime.now(timezone.utc).date()
+    rows = list(storage.read_fare_file(storage.latest_fare_path(tmp_path, "wizzair", today)))
+    assert [row["source"] for row in rows] == ["wizzair"]
+    assert calls[-1][0] == ["wizzair"]
 
 
 def test_named_source_runs_and_checks_only_that_source(tmp_path, monkeypatch):

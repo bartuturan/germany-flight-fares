@@ -54,6 +54,27 @@ def test_gives_up_after_the_last_attempt(monkeypatch):
     assert len(calls) == 3
 
 
+def test_post_json_sends_the_body_and_retries_like_get_json(monkeypatch):
+    sent = []
+
+    def fake_post(url, **kwargs):
+        sent.append((url, kwargs["json"], kwargs["headers"]["User-Agent"]))
+        return responses.pop(0)
+
+    responses = [FakeResponse(503), FakeResponse(200, {"ok": 1})]
+    monkeypatch.setattr(common.requests, "post", fake_post)
+    assert common.post_json("u", {"a": 1}, sleep=lambda _: None) == {"ok": 1}
+    assert sent == [("u", {"a": 1}, common.USER_AGENT)] * 2
+
+
+def test_post_json_does_not_retry_client_errors(monkeypatch):
+    responses = [FakeResponse(400)]
+    monkeypatch.setattr(common.requests, "post", lambda url, **kwargs: responses.pop(0))
+    with pytest.raises(requests.HTTPError):
+        common.post_json("u", {}, sleep=lambda _: None)
+    assert responses == []
+
+
 def test_does_not_retry_client_errors(monkeypatch):
     calls = queue_responses(monkeypatch, [FakeResponse(403)])
     with pytest.raises(requests.HTTPError):
