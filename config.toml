@@ -19,8 +19,7 @@ delay_seconds = 1.0
 max_consecutive_failures = 10
 
 [wizzair]
-# Off until the data has been checked over a few days.
-enabled = false
+enabled = true
 # Every German airport Wizz Air serves. Its route map lists the destinations of each.
 airports = ["BER", "CGN", "DTM", "FDH", "FKB", "FMM", "HAM", "HHN", "NUE", "STR"]
 # Two timetable requests per route. Days without a flight are left out of the answer.
@@ -35,7 +34,9 @@ max_consecutive_failures = 10
 retry_cooldown_seconds = 60
 
 [google_flights]
-enabled = true
+# Off for now to save Actions minutes. The 13:17 and 21:17 schedules in scrape.yml are off too,
+# because naming a source on the command line ignores this flag.
+enabled = false
 routes = [
   # Domestic
   "FRA-BER", "MUC-HAM",
