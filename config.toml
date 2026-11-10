@@ -24,7 +24,7 @@ routes = [
   # Domestic
   "FRA-BER", "MUC-HAM",
   # Europe
-  "FRA-LHR", "FRA-CDG", "MUC-BCN", "FRA-PMI", "MUC-ATH", "FRA-IST",
+  "FRA-LHR", "FRA-CDG", "MUC-BCN", "FRA-PMI", "MUC-ATH", "FRA-IST", "MUC-IST",
   # Long haul
   "FRA-JFK", "FRA-BKK",
 ]
