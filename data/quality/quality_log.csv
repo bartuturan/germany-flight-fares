@@ -284,6 +284,13 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-10,eurostat,invalid_values,pass,0,0,,2026-11-10T14:07:11Z,2026-11-10T1327Z
 2026-11-10,eurostat,latest_period,pass,2,<=2 months old,newest month is 2026-09,2026-11-10T14:07:11Z,2026-11-10T1327Z
 2026-11-10,eurostat,latest_change,pass,0.122,<0.4,"largest latest-month move, CP07331 I25",2026-11-10T14:07:11Z,2026-11-10T1327Z
+2026-11-10,eurostat,data_present,pass,1306,>0,,2026-11-10T14:25:09Z,2026-11-10T1425Z
+2026-11-10,eurostat,series_present,pass,6,6,,2026-11-10T14:25:09Z,2026-11-10T1425Z
+2026-11-10,eurostat,row_count,pass,1306,>=1306,,2026-11-10T14:25:09Z,2026-11-10T1425Z
+2026-11-10,eurostat,missing_months,pass,0,0,,2026-11-10T14:25:09Z,2026-11-10T1425Z
+2026-11-10,eurostat,invalid_values,pass,0,0,,2026-11-10T14:25:09Z,2026-11-10T1425Z
+2026-11-10,eurostat,latest_period,pass,2,<=2 months old,newest month is 2026-09,2026-11-10T14:25:09Z,2026-11-10T1425Z
+2026-11-10,eurostat,latest_change,pass,0.122,<0.4,"largest latest-month move, CP07331 I25",2026-11-10T14:25:09Z,2026-11-10T1425Z
 2026-11-10,google_flights,scrape,fail,,,5 Google searches failed in a row,2026-11-10T03:53:29Z,2026-11-10T0333Z
 2026-11-10,google_flights,data_present,fail,0,>0,no fares for this date,2026-11-10T03:53:29Z,2026-11-10T0333Z
 2026-11-10,google_flights,data_present,pass,61,>0,,2026-11-10T14:07:11Z,2026-11-10T1327Z
