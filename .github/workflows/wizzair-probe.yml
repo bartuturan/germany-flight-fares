@@ -1,0 +1,53 @@
+name: Wizz Air probe
+
+# A throwaway check of whether Wizz Air answers requests from GitHub's runners. Run by hand only.
+# It commits nothing and writes nothing to data/. Three jobs run in parallel, usually on different
+# machines and IPs, so one run shows whether blocking depends on which runner you get.
+
+on:
+  workflow_dispatch:
+    inputs:
+      scale:
+        description: "sample = about 20 timetable calls per job, full = every German route (about 300)"
+        required: true
+        default: sample
+        type: choice
+        options: [sample, full]
+      delay:
+        description: "Seconds between requests"
+        required: true
+        default: "3"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        attempt: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Probe Wizz Air
+        env:
+          SCALE: ${{ inputs.scale }}
+          DELAY: ${{ inputs.delay }}
+        run: python tools/wizzair_probe.py --scale "$SCALE" --delay "$DELAY" --out probe-${{ matrix.attempt }}.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: probe-${{ matrix.attempt }}
+          path: probe-${{ matrix.attempt }}.json
+          retention-days: 14
