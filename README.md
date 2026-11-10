@@ -59,6 +59,8 @@ These runs use GitHub Actions minutes, roughly 1,450 a month by estimate. Check 
 
 Each source runs independently. A source that is blocked at the start or returns nothing writes no file for that run, and missed runs can't be recovered afterwards. Google Flights keeps what it collected if it is blocked part-way or runs out of time (`time_budget_minutes`), and the run is still marked as failed. The workflow always commits what succeeded, then fails the run so GitHub notifies you.
 
+Runs never overlap: one that starts while another is running waits, then starts from the latest commit so their data doesn't conflict. If a run still can't push its data after 3 tries, the data is kept as the `data-not-pushed` artifact on that run for 14 days, because the runner is discarded afterwards.
+
 Requests are retried on HTTP 429, HTTP 5xx and connection errors. The summary is rebuilt from all the daily files on each run.
 
 ## Data quality

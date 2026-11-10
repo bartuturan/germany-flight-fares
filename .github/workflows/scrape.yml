@@ -25,7 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # By default checkout uses the commit the run was started at. A run that waited for another
+      # one to finish would then start without that run's data and conflict when it pushes.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
 
       - uses: actions/setup-python@v5
         with:
@@ -44,17 +48,34 @@ jobs:
         run: python -m scraper run ${SOURCES:+--source $SOURCES}
 
       - name: Commit whatever succeeded
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data
           if git diff --cached --quiet; then
             echo "No data changes to commit"
-          else
-            git commit -m "Data: $(date -u +%FT%H%MZ)"
-            git pull --rebase origin main
-            git push
+            exit 0
           fi
+          git commit -m "Data: $(date -u +%FT%H%MZ)"
+          for attempt in 1 2 3; do
+            if git pull --rebase origin main && git push; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Could not push, trying again ($attempt of 3)"
+            sleep 10
+          done
+          echo "::error::Could not push the data. It is attached to this run as the data-not-pushed artifact."
+          exit 1
+
+      # The runner is discarded afterwards, so keep the data if it could not be pushed.
+      - uses: actions/upload-artifact@v4
+        if: failure() && steps.commit.outcome == 'failure'
+        with:
+          name: data-not-pushed
+          path: data/
+          retention-days: 14
 
       - name: Fail the run if a source or quality check failed
         if: steps.collect.outcome == 'failure'
