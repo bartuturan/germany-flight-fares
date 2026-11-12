@@ -16,7 +16,7 @@ Latest check: 2026-11-12
 | google_flights | invalid_rows | pass | 0 | 0 |  |
 | google_flights | coverage | pass | 1.0 | >=0.95 | 96 of 96 found |
 | google_flights | duplicates | pass | 0 | 0 |  |
-| google_flights | price_range | pass | 0 | 0 | min 64, max 771; allowed 10 to 10000 |
+| google_flights | price_range | pass | 0 | 0 | min 60, max 763; allowed 10 to 10000 |
 | google_flights | row_count | pass | 96 | within 20% of 83 | +15.7% against the trailing median |
 | google_flights | median_price | pass | 119.5 | within 25% of 119 | +0.4% against the trailing median |
 | google_flights | snapshot_gap | pass | 0 | 0 |  |
