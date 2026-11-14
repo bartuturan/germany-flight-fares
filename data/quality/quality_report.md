@@ -16,9 +16,9 @@ Latest check: 2026-11-14
 | google_flights | invalid_rows | pass | 0 | 0 |  |
 | google_flights | coverage | pass | 1.0 | >=0.95 | 92 of 92 found |
 | google_flights | duplicates | pass | 0 | 0 |  |
-| google_flights | price_range | pass | 0 | 0 | min 60, max 899; allowed 10 to 10000 |
+| google_flights | price_range | pass | 0 | 0 | min 60, max 772; allowed 10 to 10000 |
 | google_flights | row_count | pass | 92 | within 20% of 84 | +9.5% against the trailing median |
-| google_flights | median_price | pass | 119.5 | within 25% of 119 | +0.4% against the trailing median |
+| google_flights | median_price | pass | 121.0 | within 25% of 119 | +1.7% against the trailing median |
 | google_flights | snapshot_gap | pass | 0 | 0 |  |
 | ryanair | data_present | pass | 4273 | >0 |  |
 | ryanair | columns | pass |  |  |  |
