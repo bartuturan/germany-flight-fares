@@ -34,9 +34,9 @@ max_consecutive_failures = 10
 retry_cooldown_seconds = 60
 
 [google_flights]
-# Off for now to save Actions minutes. The 13:17 and 21:17 schedules in scrape.yml are off too,
+# On again. The 13:17 and 21:17 schedules in scrape.yml run Google Flights alone,
 # because naming a source on the command line ignores this flag.
-enabled = false
+enabled = true
 routes = [
   # Domestic
   "FRA-BER", "MUC-HAM",

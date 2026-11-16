@@ -2,12 +2,10 @@ name: Scrape fares
 
 on:
   schedule:
-    # Every enabled source once a day. Google Flights is off for now; to bring it back, set
-    # enabled = true in config.toml and restore these two Google-only runs to see how long
-    # price moves last:
-    #   - cron: "17 13 * * *"
-    #   - cron: "17 21 * * *"
+    # Every enabled source once a day, plus two Google-only runs to see how long price moves last.
     - cron: "17 5 * * *"
+    - cron: "17 13 * * *"
+    - cron: "17 21 * * *"
   workflow_dispatch:
     inputs:
       sources:
