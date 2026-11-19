@@ -682,6 +682,13 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-18,wizzair,row_count,skip,2759,,"1 earlier snapshots, need 3",2026-11-18T14:35:24Z,2026-11-18T1356Z
 2026-11-18,wizzair,median_price,skip,79.99,,"1 earlier snapshots, need 3",2026-11-18T14:35:24Z,2026-11-18T1356Z
 2026-11-18,wizzair,snapshot_gap,pass,0,0,,2026-11-18T14:35:24Z,2026-11-18T1356Z
+2026-11-19,eurostat,data_present,pass,1312,>0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,eurostat,series_present,pass,6,6,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,eurostat,row_count,pass,1312,>=1312,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,eurostat,missing_months,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,eurostat,invalid_values,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,eurostat,latest_period,pass,1,<=2 months old,newest month is 2026-10,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,eurostat,latest_change,pass,0.133,<0.4,"largest latest-month move, CP07332 I25",2026-11-19T15:09:20Z,2026-11-19T1425Z
 2026-11-19,google_flights,data_present,pass,96,>0,,2026-11-19T02:45:35Z,2026-11-19T0233Z
 2026-11-19,google_flights,columns,pass,,,,2026-11-19T02:45:35Z,2026-11-19T0233Z
 2026-11-19,google_flights,invalid_rows,pass,0,0,,2026-11-19T02:45:35Z,2026-11-19T0233Z
@@ -691,3 +698,30 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-19,google_flights,row_count,pass,96,within 20% of 93,+3.2% against the trailing median,2026-11-19T02:45:35Z,2026-11-19T0233Z
 2026-11-19,google_flights,median_price,pass,114.5,within 25% of 119,-3.8% against the trailing median,2026-11-19T02:45:35Z,2026-11-19T0233Z
 2026-11-19,google_flights,snapshot_gap,pass,0,0,,2026-11-19T02:45:35Z,2026-11-19T0233Z
+2026-11-19,google_flights,data_present,pass,79,>0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,columns,pass,,,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,invalid_rows,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,coverage,warn,0.823,>=0.95,"79 of 96 found; missing FRA-BER-2027-01-06, FRA-CDG-2026-12-25, FRA-CDG-2027-01-02, FRA-IST-2026-11-20, FRA-IST-2026-12-07, +12 more",2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,duplicates,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,price_range,pass,0,0,"min 67, max 1075; allowed 10 to 10000",2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,row_count,pass,79,within 20% of 93,-15.1% against the trailing median,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,median_price,pass,122.0,within 25% of 119,+2.5% against the trailing median,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,snapshot_gap,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,data_present,pass,4466,>0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,columns,pass,,,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,invalid_rows,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,coverage,pass,1.0,>=0.95,98 of 98 found,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,duplicates,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,price_range,pass,0,0,"min 14.99, max 495.98; allowed 1 to 1000",2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,row_count,pass,4466,within 20% of 4238,+5.4% against the trailing median,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,median_price,pass,72.99,within 25% of 62.99,+15.9% against the trailing median,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,ryanair,snapshot_gap,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,data_present,pass,2761,>0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,columns,pass,,,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,invalid_rows,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,coverage,pass,1.0,>=0.85,70 of 70 found,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,duplicates,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,price_range,pass,0,0,"min 24.99, max 449.99; allowed 5 to 1000",2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,row_count,skip,2761,,"2 earlier snapshots, need 3",2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,median_price,skip,79.99,,"2 earlier snapshots, need 3",2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,wizzair,snapshot_gap,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
