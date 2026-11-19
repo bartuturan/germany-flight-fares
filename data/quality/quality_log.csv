@@ -707,6 +707,8 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-19,google_flights,row_count,pass,79,within 20% of 93,-15.1% against the trailing median,2026-11-19T15:09:20Z,2026-11-19T1425Z
 2026-11-19,google_flights,median_price,pass,122.0,within 25% of 119,+2.5% against the trailing median,2026-11-19T15:09:20Z,2026-11-19T1425Z
 2026-11-19,google_flights,snapshot_gap,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-19,google_flights,scrape,fail,,,5 Google searches failed in a row and none has worked,2026-11-19T21:39:47Z,2026-11-19T2139Z
+2026-11-19,google_flights,data_present,fail,0,>0,no fares for this date,2026-11-19T21:39:47Z,2026-11-19T2139Z
 2026-11-19,ryanair,data_present,pass,4466,>0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
 2026-11-19,ryanair,columns,pass,,,,2026-11-19T15:09:20Z,2026-11-19T1425Z
 2026-11-19,ryanair,invalid_rows,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z

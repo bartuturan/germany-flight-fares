@@ -11,15 +11,8 @@ Latest check: 2026-11-19
 | eurostat | invalid_values | pass | 0 | 0 |  |
 | eurostat | latest_period | pass | 1 | <=2 months old | newest month is 2026-10 |
 | eurostat | latest_change | pass | 0.133 | <0.4 | largest latest-month move, CP07332 I25 |
-| google_flights | data_present | pass | 79 | >0 |  |
-| google_flights | columns | pass |  |  |  |
-| google_flights | invalid_rows | pass | 0 | 0 |  |
-| google_flights | coverage | warn | 0.823 | >=0.95 | 79 of 96 found; missing FRA-BER-2027-01-06, FRA-CDG-2026-12-25, FRA-CDG-2027-01-02, FRA-IST-2026-11-20, FRA-IST-2026-12-07, +12 more |
-| google_flights | duplicates | pass | 0 | 0 |  |
-| google_flights | price_range | pass | 0 | 0 | min 67, max 1075; allowed 10 to 10000 |
-| google_flights | row_count | pass | 79 | within 20% of 93 | -15.1% against the trailing median |
-| google_flights | median_price | pass | 122.0 | within 25% of 119 | +2.5% against the trailing median |
-| google_flights | snapshot_gap | pass | 0 | 0 |  |
+| google_flights | scrape | fail |  |  | 5 Google searches failed in a row and none has worked |
+| google_flights | data_present | fail | 0 | >0 | no fares for this date |
 | ryanair | data_present | pass | 4466 | >0 |  |
 | ryanair | columns | pass |  |  |  |
 | ryanair | invalid_rows | pass | 0 | 0 |  |
@@ -45,7 +38,7 @@ Each cell is the worst result that day, with warning and failure counts.
 
 | Date | eurostat | google_flights | ryanair | wizzair |
 |---|---|---|---|---|
-| 2026-11-19 | pass | warn (1 warn, 0 fail) | pass | pass |
+| 2026-11-19 | pass | fail (1 warn, 2 fail) | pass | pass |
 | 2026-11-18 | pass | pass | warn (1 warn, 0 fail) | pass |
 | 2026-11-17 | pass | pass | warn (1 warn, 0 fail) | pass |
 | 2026-11-16 | pass | pass | warn (1 warn, 0 fail) | not checked |
