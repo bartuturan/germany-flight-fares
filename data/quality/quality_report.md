@@ -1,36 +1,11 @@
 # Data quality
 
-Latest check: 2026-11-19
+Latest check: 2026-11-20
 
 | Source | Check | Status | Value | Expected | Detail |
 |---|---|---|---|---|---|
-| eurostat | data_present | pass | 1312 | >0 |  |
-| eurostat | series_present | pass | 6 | 6 |  |
-| eurostat | row_count | pass | 1312 | >=1312 |  |
-| eurostat | missing_months | pass | 0 | 0 |  |
-| eurostat | invalid_values | pass | 0 | 0 |  |
-| eurostat | latest_period | pass | 1 | <=2 months old | newest month is 2026-10 |
-| eurostat | latest_change | pass | 0.133 | <0.4 | largest latest-month move, CP07332 I25 |
-| google_flights | scrape | fail |  |  | 5 Google searches failed in a row and none has worked |
+| google_flights | scrape | fail |  |  | Google returned a page with no flight data |
 | google_flights | data_present | fail | 0 | >0 | no fares for this date |
-| ryanair | data_present | pass | 4466 | >0 |  |
-| ryanair | columns | pass |  |  |  |
-| ryanair | invalid_rows | pass | 0 | 0 |  |
-| ryanair | coverage | pass | 1.0 | >=0.95 | 98 of 98 found |
-| ryanair | duplicates | pass | 0 | 0 |  |
-| ryanair | price_range | pass | 0 | 0 | min 14.99, max 495.98; allowed 1 to 1000 |
-| ryanair | row_count | pass | 4466 | within 20% of 4238 | +5.4% against the trailing median |
-| ryanair | median_price | pass | 72.99 | within 25% of 62.99 | +15.9% against the trailing median |
-| ryanair | snapshot_gap | pass | 0 | 0 |  |
-| wizzair | data_present | pass | 2761 | >0 |  |
-| wizzair | columns | pass |  |  |  |
-| wizzair | invalid_rows | pass | 0 | 0 |  |
-| wizzair | coverage | pass | 1.0 | >=0.85 | 70 of 70 found |
-| wizzair | duplicates | pass | 0 | 0 |  |
-| wizzair | price_range | pass | 0 | 0 | min 24.99, max 449.99; allowed 5 to 1000 |
-| wizzair | row_count | skip | 2761 |  | 2 earlier snapshots, need 3 |
-| wizzair | median_price | skip | 79.99 |  | 2 earlier snapshots, need 3 |
-| wizzair | snapshot_gap | pass | 0 | 0 |  |
 
 ## Last 30 days
 
@@ -38,6 +13,7 @@ Each cell is the worst result that day, with warning and failure counts.
 
 | Date | eurostat | google_flights | ryanair | wizzair |
 |---|---|---|---|---|
+| 2026-11-20 | not checked | fail (0 warn, 2 fail) | not checked | not checked |
 | 2026-11-19 | pass | fail (1 warn, 2 fail) | pass | pass |
 | 2026-11-18 | pass | pass | warn (1 warn, 0 fail) | pass |
 | 2026-11-17 | pass | pass | warn (1 warn, 0 fail) | pass |

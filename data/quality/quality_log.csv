@@ -727,3 +727,5 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-19,wizzair,row_count,skip,2761,,"2 earlier snapshots, need 3",2026-11-19T15:09:20Z,2026-11-19T1425Z
 2026-11-19,wizzair,median_price,skip,79.99,,"2 earlier snapshots, need 3",2026-11-19T15:09:20Z,2026-11-19T1425Z
 2026-11-19,wizzair,snapshot_gap,pass,0,0,,2026-11-19T15:09:20Z,2026-11-19T1425Z
+2026-11-20,google_flights,scrape,fail,,,Google returned a page with no flight data,2026-11-20T02:18:44Z,2026-11-20T0218Z
+2026-11-20,google_flights,data_present,fail,0,>0,no fares for this date,2026-11-20T02:18:44Z,2026-11-20T0218Z
