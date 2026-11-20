@@ -745,6 +745,15 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-20,google_flights,row_count,pass,96,within 20% of 93,+3.2% against the trailing median,2026-11-20T14:38:22Z,2026-11-20T1400Z
 2026-11-20,google_flights,median_price,pass,114.0,within 25% of 119,-4.2% against the trailing median,2026-11-20T14:38:22Z,2026-11-20T1400Z
 2026-11-20,google_flights,snapshot_gap,pass,0,0,,2026-11-20T14:38:22Z,2026-11-20T1400Z
+2026-11-20,google_flights,data_present,pass,96,>0,,2026-11-20T21:30:07Z,2026-11-20T2115Z
+2026-11-20,google_flights,columns,pass,,,,2026-11-20T21:30:07Z,2026-11-20T2115Z
+2026-11-20,google_flights,invalid_rows,pass,0,0,,2026-11-20T21:30:07Z,2026-11-20T2115Z
+2026-11-20,google_flights,coverage,pass,1.0,>=0.95,96 of 96 found,2026-11-20T21:30:07Z,2026-11-20T2115Z
+2026-11-20,google_flights,duplicates,pass,0,0,,2026-11-20T21:30:07Z,2026-11-20T2115Z
+2026-11-20,google_flights,price_range,pass,0,0,"min 67, max 1075; allowed 10 to 10000",2026-11-20T21:30:07Z,2026-11-20T2115Z
+2026-11-20,google_flights,row_count,pass,96,within 20% of 93,+3.2% against the trailing median,2026-11-20T21:30:07Z,2026-11-20T2115Z
+2026-11-20,google_flights,median_price,pass,115.0,within 25% of 119,-3.4% against the trailing median,2026-11-20T21:30:07Z,2026-11-20T2115Z
+2026-11-20,google_flights,snapshot_gap,pass,0,0,,2026-11-20T21:30:07Z,2026-11-20T2115Z
 2026-11-20,ryanair,data_present,pass,4485,>0,,2026-11-20T14:38:22Z,2026-11-20T1400Z
 2026-11-20,ryanair,columns,pass,,,,2026-11-20T14:38:22Z,2026-11-20T1400Z
 2026-11-20,ryanair,invalid_rows,pass,0,0,,2026-11-20T14:38:22Z,2026-11-20T1400Z
