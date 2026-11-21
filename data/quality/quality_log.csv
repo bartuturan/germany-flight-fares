@@ -772,3 +772,12 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-20,wizzair,row_count,pass,2750,within 20% of 2759,-0.3% against the trailing median,2026-11-20T14:38:22Z,2026-11-20T1400Z
 2026-11-20,wizzair,median_price,pass,79.99,within 25% of 79.99,+0.0% against the trailing median,2026-11-20T14:38:22Z,2026-11-20T1400Z
 2026-11-20,wizzair,snapshot_gap,pass,0,0,,2026-11-20T14:38:22Z,2026-11-20T1400Z
+2026-11-21,google_flights,data_present,pass,91,>0,,2026-11-21T02:28:59Z,2026-11-21T0212Z
+2026-11-21,google_flights,columns,pass,,,,2026-11-21T02:28:59Z,2026-11-21T0212Z
+2026-11-21,google_flights,invalid_rows,pass,0,0,,2026-11-21T02:28:59Z,2026-11-21T0212Z
+2026-11-21,google_flights,coverage,pass,0.968,>=0.95,"91 of 94 found; missing FRA-CDG-2026-12-17, MUC-ATH-2026-12-08, MUC-IST-2027-01-02",2026-11-21T02:28:59Z,2026-11-21T0212Z
+2026-11-21,google_flights,duplicates,pass,0,0,,2026-11-21T02:28:59Z,2026-11-21T0212Z
+2026-11-21,google_flights,price_range,pass,0,0,"min 67, max 1084; allowed 10 to 10000",2026-11-21T02:28:59Z,2026-11-21T0212Z
+2026-11-21,google_flights,row_count,pass,91,within 20% of 94.5,-3.7% against the trailing median,2026-11-21T02:28:59Z,2026-11-21T0212Z
+2026-11-21,google_flights,median_price,pass,115.0,within 25% of 119,-3.4% against the trailing median,2026-11-21T02:28:59Z,2026-11-21T0212Z
+2026-11-21,google_flights,snapshot_gap,pass,0,0,,2026-11-21T02:28:59Z,2026-11-21T0212Z
