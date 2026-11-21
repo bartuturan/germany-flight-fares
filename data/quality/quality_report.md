@@ -11,13 +11,13 @@ Latest check: 2026-11-21
 | eurostat | invalid_values | pass | 0 | 0 |  |
 | eurostat | latest_period | pass | 1 | <=2 months old | newest month is 2026-10 |
 | eurostat | latest_change | pass | 0.133 | <0.4 | largest latest-month move, CP07332 I25 |
-| google_flights | data_present | pass | 84 | >0 |  |
+| google_flights | data_present | pass | 94 | >0 |  |
 | google_flights | columns | pass |  |  |  |
 | google_flights | invalid_rows | pass | 0 | 0 |  |
-| google_flights | coverage | warn | 0.894 | >=0.95 | 84 of 94 found; missing FRA-BER-2026-12-21, FRA-BKK-2026-12-06, FRA-JFK-2026-12-23, FRA-LHR-2027-01-07, FRA-PMI-2026-12-08, +5 more |
+| google_flights | coverage | pass | 1.0 | >=0.95 | 94 of 94 found |
 | google_flights | duplicates | pass | 0 | 0 |  |
-| google_flights | price_range | pass | 0 | 0 | min 59, max 773; allowed 10 to 10000 |
-| google_flights | row_count | pass | 84 | within 20% of 94.5 | -11.1% against the trailing median |
+| google_flights | price_range | pass | 0 | 0 | min 59, max 900; allowed 10 to 10000 |
+| google_flights | row_count | pass | 94 | within 20% of 94.5 | -0.5% against the trailing median |
 | google_flights | median_price | pass | 115.0 | within 25% of 119 | -3.4% against the trailing median |
 | google_flights | snapshot_gap | pass | 0 | 0 |  |
 | ryanair | data_present | pass | 4430 | >0 |  |
