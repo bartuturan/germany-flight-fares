@@ -876,3 +876,12 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-22,wizzair,row_count,pass,2711,within 20% of 2757,-1.7% against the trailing median,2026-11-22T13:57:44Z,2026-11-22T1320Z
 2026-11-22,wizzair,median_price,pass,79.99,within 25% of 79.99,+0.0% against the trailing median,2026-11-22T13:57:44Z,2026-11-22T1320Z
 2026-11-22,wizzair,snapshot_gap,pass,0,0,,2026-11-22T13:57:44Z,2026-11-22T1320Z
+2026-11-23,google_flights,data_present,pass,90,>0,,2026-11-23T01:55:29Z,2026-11-23T0140Z
+2026-11-23,google_flights,columns,pass,,,,2026-11-23T01:55:29Z,2026-11-23T0140Z
+2026-11-23,google_flights,invalid_rows,pass,0,0,,2026-11-23T01:55:29Z,2026-11-23T0140Z
+2026-11-23,google_flights,coverage,pass,0.978,>=0.95,"90 of 92 found; missing FRA-BER-2026-12-29, FRA-LHR-2026-12-05",2026-11-23T01:55:29Z,2026-11-23T0140Z
+2026-11-23,google_flights,duplicates,pass,0,0,,2026-11-23T01:55:29Z,2026-11-23T0140Z
+2026-11-23,google_flights,price_range,pass,0,0,"min 53, max 1052; allowed 10 to 10000",2026-11-23T01:55:29Z,2026-11-23T0140Z
+2026-11-23,google_flights,row_count,pass,90,within 20% of 94.5,-4.8% against the trailing median,2026-11-23T01:55:29Z,2026-11-23T0140Z
+2026-11-23,google_flights,median_price,pass,114.0,within 25% of 119,-4.2% against the trailing median,2026-11-23T01:55:29Z,2026-11-23T0140Z
+2026-11-23,google_flights,snapshot_gap,pass,0,0,,2026-11-23T01:55:29Z,2026-11-23T0140Z
