@@ -1084,3 +1084,12 @@ date,source,check,status,value,expected,detail,checked_at,run
 2026-11-26,wizzair,row_count,pass,2522,within 20% of 2736,-7.8% against the trailing median,2026-11-26T15:52:15Z,2026-11-26T1512Z
 2026-11-26,wizzair,median_price,pass,79.99,within 25% of 79.99,+0.0% against the trailing median,2026-11-26T15:52:15Z,2026-11-26T1512Z
 2026-11-26,wizzair,snapshot_gap,pass,0,0,,2026-11-26T15:52:15Z,2026-11-26T1512Z
+2026-11-27,google_flights,data_present,pass,97,>0,,2026-11-27T03:56:17Z,2026-11-27T0338Z
+2026-11-27,google_flights,columns,pass,,,,2026-11-27T03:56:17Z,2026-11-27T0338Z
+2026-11-27,google_flights,invalid_rows,pass,0,0,,2026-11-27T03:56:17Z,2026-11-27T0338Z
+2026-11-27,google_flights,coverage,pass,1.0,>=0.95,97 of 97 found,2026-11-27T03:56:17Z,2026-11-27T0338Z
+2026-11-27,google_flights,duplicates,pass,0,0,,2026-11-27T03:56:17Z,2026-11-27T0338Z
+2026-11-27,google_flights,price_range,pass,0,0,"min 50, max 912; allowed 10 to 10000",2026-11-27T03:56:17Z,2026-11-27T0338Z
+2026-11-27,google_flights,row_count,pass,97,within 20% of 94.5,+2.6% against the trailing median,2026-11-27T03:56:17Z,2026-11-27T0338Z
+2026-11-27,google_flights,median_price,pass,119.0,within 25% of 116.25,+2.4% against the trailing median,2026-11-27T03:56:17Z,2026-11-27T0338Z
+2026-11-27,google_flights,snapshot_gap,pass,0,0,,2026-11-27T03:56:17Z,2026-11-27T0338Z
